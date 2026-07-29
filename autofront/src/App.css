@@ -1,0 +1,12 @@
+/* App.css */
+
+/* Importe a fonte Montserrat */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
+
+/* Outros estilos para o corpo do documento ou estilos globais adicionais */
+body {
+  font-family: 'Montserrat', sans-serif;
+  /* Outros estilos para o corpo do documento */
+}
+
+/* Estilos específicos do componente App, se houver */

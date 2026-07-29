@@ -1,0 +1,64 @@
+/* Title.css */
+
+
+.Logo {
+    width: 20px; /* Ajuste a largura conforme necessário */
+    height: 20px; /* Ajuste a altura conforme necessário */
+    position: absolute;
+    bottom: 200px; /* Ajuste a posição conforme necessário */
+    left: 200px;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0);
+    padding: 0px;
+}
+
+.title-container {
+    position: absolute;
+    bottom: 250px;
+    left: 350px;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0);
+    padding: 10px;
+    border-radius: 5px;
+    text-align: left;
+}
+  
+.title-text {
+    font-size: 38px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.subtitle-text {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.title-container2 {
+    position: absolute;
+    bottom: 100px; /* Ajuste conforme necessário */
+    left: 350px;
+    transform: translateX(-50%);
+    text-align: left;
+}
+
+.subttitle-information1,
+.subttitle-information2 {
+    font-family: Montserrat;
+    font-size: 12px;
+    color: white;
+    font-weight: bold;
+}
+
+.btn_Learn {
+    margin-top: 70px;
+    font-family: Montserrat;
+    color: white;
+    font-weight: bold;  
+    width: 50%;
+    font-size: 14px;
+    height: 50px;
+    border-radius: 40px;
+    background-color: #EF6B48;
+}

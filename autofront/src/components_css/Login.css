@@ -1,0 +1,57 @@
+@import '~typeface-montserrat';
+
+body {
+  margin: 0;
+  padding: 0;
+  background-image: url("../img/Fundo_Azul.png");
+  background-size: cover;
+  background-position: center;
+  font-family: Montserrat;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Estilos do componente Login */
+.login-container {
+  text-align: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 40px;
+  margin-top: 10vh;
+  padding: 5px 30px 30px 30px;
+}
+  .input-style {
+    color: darkgray;
+  }
+  
+  
+  .link-style {
+    color: lightgray;
+  }
+  
+  
+  strong{
+  
+    padding-top: 10px;
+    font-family: Montserrat;
+    font-size: 28px;
+    color: white;
+    font-weight: bold;
+  
+  }
+  
+  .btn_login {
+    font-family: Montserrat;
+    color: white;
+    font-weight: bold;  
+    width: 50%;
+    font-size: 14px;
+    height: 50px;
+    border-Radius: 40px;
+    background-color: #EF6B48;
+  
+  }
+  
