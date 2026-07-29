@@ -1,77 +1,43 @@
-// Código editado com busca correta na tabela - Incompleto:
-
-import React, { useState, useEffect, useMemo } from 'react';
-import { Table, Spin, Layout, Space, Tag, Input, Modal, Select, Button } from 'antd';
-import { SearchOutlined, FilterOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Table, Spin, Layout, Space, Tag, Input, Modal, Button, message } from 'antd';
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import CustomHeader from '../Header_additionalH';
-import CertificateList from '../Alunos/CertificateList';
 
 const { Content } = Layout;
-
-const bearerToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcwMzMwNTk3MCwianRpIjoiMWM3MTgwZjEtYTA4Mi00NzJjLWE4NTktYmIxNzJkMmM1NmYzIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6eyJ1c2VybmFtZSI6IjE3MDgyMCJ9LCJuYmYiOjE3MDMzMDU5NzAsImNzcmYiOiIzYzViYTdkZS1hZTBlLTQxZmEtOTZhYy1lOTYxYjRmNGY0ZGMiLCJleHAiOjE3MDMzMDc3NzB9.ke-egxN8yWjcI_kNFUj2PBoZY5tGsAWfOjW9Q7fTMvc'
 
 const Inst = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [submittedActivities, setSubmittedActivities] = useState([]);
-  const [selectedButton, setSelectedButton] = useState('status');
-  const [filteredInfo, setFilteredInfo] = useState({});
-  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [approvalAction, setApprovalAction] = useState(true);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-
-
-  const approvedActivities = useMemo(() => submittedActivities.filter(activity => activity.status === 'Aprovado'), [submittedActivities]);
-  const rejectedActivities = useMemo(() => submittedActivities.filter(activity => activity.status === 'Rejeitado'), [submittedActivities]);
-
-  //Pegar as requisições de atividades
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('http://localhost:2500/inst');
-        const result = await response.json();
-        setData(result);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
-  const handleFilterButtonClick = () => {
-    setShowFilters(!showFilters);
-  };
-
-  const statusOptions = [
-    { label: 'Em andamento', value: 'Em análise' },
-    { label: 'Aprovado', value: 'Aprovado' },
-    { label: 'Rejeitado', value: 'Rejeitado' },
-  ];
-
-  const updatePendingApprovalCount = (activities) => {
-    const count = activities.filter(activity => activity.status.toLowerCase() === 'Em análise').length;
-    setPendingApprovalCount(count);
-  };
-
-  const handleReview = (record, pass) => {
-    if (record.status === 'Em análise') {
-      setSelectedActivity(record);
-      setApprovalAction(pass);
-      setRejectionReason(''); // Limpar motivo de rejeição ao abrir o modal
-      setConfirmModalVisible(true);
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:2500/inst', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (Array.isArray(result)) {
+        setData(result);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleApprove = (record) => {
     setSelectedActivity(record);
     setApprovalAction(true);
+    setRejectionReason('');
     setConfirmModalVisible(true);
   };
 
@@ -82,253 +48,169 @@ const Inst = () => {
     setConfirmModalVisible(true);
   };
 
-  const handleConfirm = () => {
-    if (selectedActivity && selectedActivity.certificate) {
-      // Atualiza o status da atividade
-      const updatedStatus = approvalAction ? 'Aprovado' : 'Rejeitado';
-      const updatedActivity = {
-        ...selectedActivity,
+  const handleConfirm = async () => {
+    if (!selectedActivity) return;
+
+    const token = localStorage.getItem('token');
+    const updatedStatus = approvalAction ? 'Aprovado' : 'Rejeitado';
+
+    try {
+      const body = {
+        id_certificate: selectedActivity.id,
         status: updatedStatus,
-        rejectionReason: approvalAction ? '' : rejectionReason,
       };
-  
-      // Atualiza a lista de atividades
-      const updatedData = data.map((activity) =>
-        activity.certificate === selectedActivity.certificate ? updatedActivity : activity
-      );
-  
-      setData(updatedData);
-  
-      // Fecha o modal
-      setConfirmModalVisible(false);
-  
-      // Loga o JSON atualizado após a confirmação
-      console.log(`Atividade Atualizada:`, updatedActivity);
+      if (!approvalAction && rejectionReason.trim()) {
+        body.rejection_reason = rejectionReason.trim();
+      }
+
+      const response = await fetch('http://localhost:2500/inst', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (response.ok) {
+        // Atualiza localmente
+        const updatedData = data.map((item) =>
+          item.id === selectedActivity.id ? { ...item, status: updatedStatus } : item
+        );
+        setData(updatedData);
+        message.success(`Atividade ${updatedStatus.toLowerCase()} com sucesso!`);
+      } else {
+        message.error('Erro ao atualizar status.');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      message.error('Erro de conexão com o servidor.');
     }
+
+    setConfirmModalVisible(false);
+    setSelectedActivity(null);
   };
 
-  const handleFilterRemove = (key) => {
-    setFilteredInfo((prevFilters) => {
-      const { [key]: removedFilter, ...restFilters } = prevFilters;
-      return restFilters;
-    });
-  };
-
-  const capitalizeFirstLetter = (string) => {
-    return string.charAt(0).toUpperCase() + string.slice(1);
-  };
-
-  const activeFilters = Object.entries(filteredInfo)
-    .filter(([key, value]) => value !== null && value !== undefined && value !== '')
-    .map(([key, value]) => (
-      <Tag key={key} color="#108ee9" closable onClose={() => handleFilterRemove(key)}>
-        {capitalizeFirstLetter(key)}: {value}
-      </Tag>
-    ));
+  const pendingCount = data.filter(item => item.status === 'Em Análise').length;
 
   const columns = [
     {
-      title: 'Title',
+      title: 'Aluno',
+      dataIndex: 'aluno',
+      key: 'aluno',
+    },
+    {
+      title: 'Título',
       dataIndex: 'title',
       key: 'title',
     },
     {
-      title: 'Type',
+      title: 'Tipo',
       dataIndex: 'type',
       key: 'type',
     },
     {
-      title: 'Hours',
+      title: 'Horas',
       dataIndex: 'hours',
       key: 'hours',
+      width: 80,
     },
     {
-      title: 'Certificate',
+      title: 'Certificado',
       dataIndex: 'certificate',
       key: 'certificate',
-      render: (certificate) => (
-        <a href={certificate} target="_blank" rel="noopener noreferrer">
-          {certificate}
-        </a>
-      ),
+      ellipsis: true,
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      filters: statusOptions,
-      filteredValue: filteredInfo.status || null,
-      onFilter: (value, record) => record.status === value,
-      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-        <div style={{ padding: 8 }}>
-          <Select
-            style={{ width: '100%' }}
-            placeholder="Selecione o status"
-            value={selectedKeys[0]}
-            onSelect={(value) => {
-              setSelectedKeys(value ? [value] : []);
-              confirm({ closeDropdown: false });
-            }}
-          >
-            {statusOptions.map(option => (
-              <Select.Option key={option.value} value={option.value}>
-                {option.label}
-              </Select.Option>
-            ))}
-          </Select>
-          <Space>
-            <Button
-              onClick={() => {
-                clearFilters();
-                confirm({ closeDropdown: false });
-              }}
-              size="small"
-              style={{ width: 90 }}
-            >
-              Limpar
-            </Button>
-          </Space>
-        </div>
-      ),
-      filterIcon: (filtered) => (
-        <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
-      ),
-      render: (text) => (
-        <span>
-          <Tag color={text === 'Aprovado' ? 'green' : text === 'Rejeitado' ? 'red' : 'blue'}>{text}</Tag>
-        </span>
-      ),
+      width: 120,
+      render: (text) => {
+        const color = text === 'Aprovado' ? 'green' : text === 'Rejeitado' ? 'red' : 'blue';
+        return <Tag color={color}>{text}</Tag>;
+      },
     },
     {
       title: 'Ação',
       key: 'action',
-      render: (text, record) => (
-        <Space size="middle">
-          <Button
-            type="primary"
-            onClick={() => handleApprove(record)}
-            style={{ backgroundColor: '#87d068', color: 'white' }}
-          >
-            Aprovar
-          </Button>
-          <Button
-            type="danger"
-            onClick={() => handleReject(record)}
-            style={{ backgroundColor: '#ff4d4f', color: 'white' }}
-          >
-            Rejeitar
-          </Button>
-        </Space>
-      ),
+      width: 200,
+      render: (_, record) => {
+        if (record.status !== 'Em Análise') {
+          return <Tag>{record.status}</Tag>;
+        }
+        return (
+          <Space size="small" wrap>
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckOutlined />}
+              onClick={() => handleApprove(record)}
+              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+            >
+              Aprovar
+            </Button>
+            <Button
+              danger
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={() => handleReject(record)}
+            >
+              Rejeitar
+            </Button>
+          </Space>
+        );
+      },
     },
   ];
 
-  const handlePendingApprovalClick = () => {
-    setSelectedButton('status');
-    setFilteredInfo({ status: ['Em análise'] });
-  };
-
-  const { class: classFilter, name: nameFilter } = filteredInfo;
-  const isAnyFilterApplied = Object.values(filteredInfo).some(Boolean);
-
   return (
-    <Layout>
+    <Layout style={{ minHeight: '100vh' }}>
       <CustomHeader />
-      <Content style={{ padding: '24px', backgroundColor: '#fff', marginTop: '40px', position: 'relative' }}>
-
-        <div style={{ color: '#0f4abe', marginBottom: '24px' }}>
-          <h1>Solicitações de Horas Complementares</h1>
+      <Content style={{ padding: '16px', backgroundColor: '#fff' }}>
+        <div style={{ color: '#0f4abe', marginBottom: '8px' }}>
+          <h2 style={{ margin: 0 }}>Solicitações de Horas Complementares</h2>
         </div>
-        <div style={{ textAlign: 'left', marginBottom: '16px', marginTop: '20px' }}>
-          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-            <div>
-              <Button
-                type="text"
-                onClick={handlePendingApprovalClick}
-                style={{
-                  fontWeight: selectedButton === 'status' ? 'bold' : 'normal',
-                  color: selectedButton === 'status' ? '#0f72be' : 'inherit',
-                }}
-              >
-                <span>
-                  Aguardando Aprovação ({pendingApprovalCount} pendentes)
-                  {isAnyFilterApplied && (
-                    <span style={{ marginLeft: '8px', color: '#1890ff' }}>
-                      <SearchOutlined />
-                    </span>
-                  )}
-                </span>
-              </Button>
-            </div>
-
-            {showFilters && (
-              <div style={{ marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
-                <Button type="text" onClick={handleFilterButtonClick}>
-                  <FilterOutlined />
-                </Button>
-                {activeFilters}
-              </div>
-            )}
-
-            {/* Adicionado o botão de filtro de volta */}
-            {!showFilters && (
-              <div style={{ marginLeft: '8px' }}>
-                <Button type="text" onClick={handleFilterButtonClick}>
-                  <FilterOutlined />
-                </Button>
-              </div>
-            )}
-          </Space>
+        <div style={{ marginBottom: '12px' }}>
+          <Tag color="blue" style={{ fontSize: '14px', padding: '4px 12px' }}>
+            {pendingCount} pendente{pendingCount !== 1 ? 's' : ''}
+          </Tag>
         </div>
+        <div style={{ borderBottom: '2px solid #e8e8e8', marginBottom: '12px' }}></div>
 
-        <div style={{ borderBottom: '3px solid #ccc', marginBottom: '8px', position: 'relative' }}>
-          <div
-            style={{
-              height: '4px',
-              backgroundColor: '#0f72be',
-              marginTop: '-2px',
-              position: 'absolute',
-              transition: 'width 0.3s ease',
-            }}
-          ></div>
-        </div>
-
-        <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }}>
-          {/* Filter buttons */}
-        </div>
-
-
-        <Spin spinning={loading} tip="Loading...">
+        <Spin spinning={loading}>
           <Table
             dataSource={data}
             columns={columns}
-            pagination={false}
-            scroll={{ x: 'max-content' }}
-            rowKey={(record) => record.certificate}
-            onRow={(record) => ({
-              onClick: () => {
-                // Verifica se o modal de confirmação não está visível antes de enviar para o console
-                if (!confirmModalVisible && record.status === 'Em análise') {
-                  // Não há console.log aqui
-                }
-              },
-            })}
+            pagination={{ pageSize: 10 }}
+            scroll={{ x: 700 }}
+            rowKey={(record) => record.id}
           />
         </Spin>
+
         <Modal
-          title={`Você tem certeza que deseja ${approvalAction ? 'aprovar' : 'reprovar'} esta atividade?`}
-          visible={confirmModalVisible}
+          title={approvalAction ? 'Confirmar Aprovação' : 'Confirmar Rejeição'}
+          open={confirmModalVisible}
           onOk={handleConfirm}
           onCancel={() => setConfirmModalVisible(false)}
           okText="Confirmar"
           cancelText="Cancelar"
+          okButtonProps={{
+            danger: !approvalAction,
+            style: approvalAction ? { backgroundColor: '#52c41a', borderColor: '#52c41a' } : {},
+          }}
         >
-          {!approvalAction && (
+          {approvalAction ? (
+            <p>Tem certeza que deseja <strong>aprovar</strong> esta atividade?</p>
+          ) : (
             <div>
-              <p>Motivo da Rejeição:</p>
+              <p>Tem certeza que deseja <strong>rejeitar</strong> esta atividade?</p>
+              <p style={{ marginTop: '12px', marginBottom: '4px' }}>Motivo da rejeição:</p>
               <Input.TextArea
+                rows={3}
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Descreva o motivo..."
               />
             </div>
           )}

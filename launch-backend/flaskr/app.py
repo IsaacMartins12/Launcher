@@ -58,6 +58,7 @@ class Registros(db.Model):
     hours = db.Column(db.Integer)
     certificate = db.Column(db.String(200))
     status = db.Column(db.String(50))
+    rejection_reason = db.Column(db.String(500), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     deleted_at = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, nullable=True)
@@ -165,13 +166,17 @@ def inst_get():
     registros = Registros.query.all()
     result = []
     for r in registros:
+        user = Users.query.get(r.user_id)
         result.append({
             "id": r.id,
             "title": r.title,
             "type": r.type,
             "hours": r.hours,
             "certificate": r.certificate,
-            "status": r.status
+            "status": r.status,
+            "rejection_reason": r.rejection_reason,
+            "aluno": user.name if user else "Desconhecido",
+            "created_at": str(r.created_at) if r.created_at else None
         })
     return jsonify(result), 200
 
@@ -189,6 +194,7 @@ def inst_put():
         return jsonify({"error": "Registro não encontrado"}), 404
 
     registro.status = data.get('status', registro.status)
+    registro.rejection_reason = data.get('rejection_reason', None)
     registro.updated_at = datetime.utcnow()
     db.session.commit()
 

@@ -24,6 +24,7 @@ CREATE TABLE `registros` (
   `hours` INT NOT NULL,
   `certificate` VARCHAR(200),
   `status` VARCHAR(50),
+  `rejection_reason` VARCHAR(500),
   `created_at` DATETIME,
   `deleted_at` DATETIME,
   `updated_at` DATETIME,

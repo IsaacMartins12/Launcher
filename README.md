@@ -64,6 +64,6 @@ docker compose up --build -d
 - [x] Área do aluno (enviar certificados, ver status)
 - [x] Docker Compose (MySQL + Backend + Frontend)
 - [x] Layout responsivo (mobile + desktop)
-- [ ] Área do diretor (aprovar/rejeitar)
+- [x] Área do diretor (aprovar/rejeitar)
 - [ ] Upload real de arquivos (PDF/imagem)
 - [ ] Hash de senhas (atualmente plaintext)
