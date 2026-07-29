@@ -1,0 +1,64 @@
+/* Upload.css */
+.upload-container {
+  margin: -50px 0;
+  padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden; /* Adicionado para evitar a barra de rolagem horizontal */
+}
+
+.upload-title {
+  margin-bottom: -80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Montserrat;
+}
+
+.upload-area {
+  margin-bottom: -50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-height: 60vh;
+  background-color: #FFFFFF;
+}
+
+.upload-message {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.file-list {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.file-list button {
+  padding: 8px;
+  cursor: pointer;
+  border: none;
+  border-radius: 40px;
+  background-color: #EF6B48;
+  font-family: Montserrat;
+  font-weight: bold;  
+  width: 20%;
+  font-size: 12px;
+  height: 40px;
+  color: antiquewhite;      
+}
+
+.custom-upload {
+  background-color: #f0f0f0; /* Define a cor de fundo do botão */
+  width: 700px; /* Ajusta a largura do botão */
+  height: 200px; /* Ajusta a altura do botão */
+  border: 1px solid #ccc; /* Adiciona uma borda */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}

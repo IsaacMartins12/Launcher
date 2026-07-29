@@ -1,0 +1,12 @@
+/* src/index.css */
+
+/* Estilo para a classe title-container */
+.title-container {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background-color: rgba(50, 50, 50, 0.5);
+  padding: 10px;
+  border-radius: 5px;
+  color: #fff;
+}
