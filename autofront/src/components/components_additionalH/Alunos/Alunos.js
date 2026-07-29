@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Button, Space, Table, Tag, Modal, message } from 'antd';
 import { PlusOutlined, SendOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import CustomHeader from '../Header_additionalH';
@@ -8,30 +8,38 @@ import moment from 'moment';
 
 const { Content } = Layout;
 
-{/*const reasonFromBackend = 'Motivo de rejeição do back-end'; - Adicionar a url do servidor onde o motivo da rejeição vai estar/}
-{/* // Criar uma cópia do estado atualizado com o motivo de rejeição
-const updatedSubmittedActivities = submittedActivities.map((activity) => {
-  // Atualizar o objeto correspondente com o motivo de rejeição
-  return { ...activity, rejectReason: reasonFromBackend };
-});
-
-// Atualizar o estado
-setSubmittedActivities(updatedSubmittedActivities);
- */}
-
 const Aluno = () => {
   const [activities, setActivities] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [submittedActivities, setSubmittedActivities] = useState([]);
   const [selectedButton, setSelectedButton] = useState('send');
   const [fileList, setFileList] = useState([]);
-  const [rejectReason, setRejectReason] = useState('');
+
+  // Buscar registros do backend ao carregar
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetch('http://localhost:2500/aluno', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            const mapped = data.map(item => ({
+              ...item,
+              submissionDate: item.created_at,
+            }));
+            setSubmittedActivities(mapped);
+          }
+        })
+        .catch(err => console.error('Erro ao buscar registros:', err));
+    }
+  }, []);
 
 
   const onFinishActivity = (values) => {
     setActivities([...activities, values]);
     setModalVisible(false);
-    setRejectReason(''); // Limpa o motivo de rejeição após o envio
   };
 
   const addActivity = () => {
@@ -41,6 +49,7 @@ const Aluno = () => {
 
   const handleSend = async () => {
     try {
+      const token = localStorage.getItem('token');
       const submitted = activities.map((activity) => ({
         title: activity.title,
         type: activity.type,
@@ -50,15 +59,13 @@ const Aluno = () => {
         submissionDate: moment().format('MM/DD/YYYY'),
         submissionTime: new Date().toLocaleTimeString(),
       }));
-  
-      console.log('JSON Gerado:', submitted);
-  
+
       const response = await fetch('http://localhost:2500/files', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
-        //body: JSON.stringify({ submittedActivities: submitted }),
         body: JSON.stringify(submitted),
       });
 
@@ -172,19 +179,18 @@ const Aluno = () => {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <CustomHeader />
-      <Content style={{ padding: '24px', backgroundColor: '#fff', marginTop: '30px' }}>
-        <div style={{ color: '#0f4abe', marginBottom: '24px' }}><h1>Horas Complementares</h1></div>
-        <div style={{ textAlign: 'left', marginBottom: '16px', marginTop: '16px' }}>
-          <Space size={20}>
+      <Content style={{ padding: '16px', backgroundColor: '#fff' }}>
+        <div style={{ color: '#0f4abe', marginBottom: '8px' }}><h2 style={{ margin: 0 }}>Horas Complementares</h2></div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <Space size={12} wrap>
             <Button
               type="text"
               style={{
                 fontWeight: selectedButton === 'send' ? 'bold' : 'normal',
                 color: selectedButton === 'send' ? '#0f72be' : 'inherit',
+                padding: '4px 8px',
               }}
-              onClick={() => {
-                setSelectedButton('send');
-              }}
+              onClick={() => setSelectedButton('send')}
             >
               Enviar
             </Button>
@@ -193,10 +199,9 @@ const Aluno = () => {
               style={{
                 fontWeight: selectedButton === 'status' ? 'bold' : 'normal',
                 color: selectedButton === 'status' ? '#0f72be' : 'inherit',
+                padding: '4px 8px',
               }}
-              onClick={() => {
-                setSelectedButton('status');
-              }}
+              onClick={() => setSelectedButton('status')}
             >
               Status
             </Button>
@@ -205,57 +210,33 @@ const Aluno = () => {
               style={{
                 fontWeight: selectedButton === 'view' ? 'bold' : 'normal',
                 color: selectedButton === 'view' ? '#0f72be' : 'inherit',
+                padding: '4px 8px',
               }}
-              onClick={() => {
-                setModalVisible(false);
-                setSelectedButton('view');
-              }}
+              onClick={() => { setModalVisible(false); setSelectedButton('view'); }}
             >
               Horas
             </Button>
           </Space>
-        </div>
-        {/* Adiciona a linha cinza abaixo dos botões */}
-        <div style={{ borderBottom: '3px solid #ccc', marginBottom: '8px' }}>
-          <div
-            style={{
-              height: '4px',
-              backgroundColor: '#0f72be',
-              width: selectedButton === 'send' ? '5%' : selectedButton === 'status' ? '5%' : selectedButton === 'view' ? '5%' : '0%',
-              marginLeft: selectedButton === 'status' ? '7%' : selectedButton === 'view' ? '13%' : '0%', // Ajusta a margem à esquerda quando 'vie  w' é selecionado
-              marginTop: '-2px', // Move a barra azul para cima para ficar em cima da cinza
-              position: 'absolute',
-              transition: 'width 0.3s ease',
-            }}
-          ></div>
-        </div>
-        <div style={{ textAlign: 'right', marginBottom: '16px', marginTop: '16px' }}>
-        {selectedButton === 'send' && (
-            <Space style={{ marginBottom: '16px' }}>
-              <Button
-                icon={<PlusOutlined />}
-                onClick={addActivity} // Abrir o modal ao clicar no botão
-                type="primary"
-                
-              >
+          {selectedButton === 'send' && (
+            <Space wrap>
+              <Button icon={<PlusOutlined />} onClick={addActivity} type="primary">
                 Adicionar Atividade
               </Button>
-              {activities.length > 0 && ( // Renderiza o botão Send apenas se houver pelo menos uma atividade
+              {activities.length > 0 && (
                 <Button icon={<SendOutlined />} type="primary" onClick={handleSend}>
                   Enviar
                 </Button>
               )}
             </Space>
           )}
-
         </div>
+        <div style={{ borderBottom: '2px solid #e8e8e8', marginBottom: '12px' }}></div>
         <Modal
-          visible={modalVisible}
+          open={modalVisible}
           onCancel={() => setModalVisible(false)}
           footer={null}
-          style={{ maxHeight: '50vh' }}
-
-          
+          width="90%"
+          style={{ maxWidth: '500px', top: 20 }}
         >
           {/* Usando o componente ActivityForm para enviar atividades */}
           <ActivityForm
@@ -283,7 +264,7 @@ const Aluno = () => {
         ) : (
           <>
             {selectedButton === 'status' ? (
-              <Table dataSource={submittedActivities} columns={submittedColumns} pagination={false} />
+              <Table dataSource={submittedActivities} columns={submittedColumns} pagination={false} scroll={{ x: 600 }} />
             ) : selectedButton === 'hours' ? (
               <>
                 <h2>Horas Complementares</h2>
@@ -298,7 +279,7 @@ const Aluno = () => {
                 />
               </>
             ) : (
-              <Table dataSource={activities} columns={columns} pagination={false} />
+              <Table dataSource={activities} columns={columns} pagination={false} scroll={{ x: 600 }} />
             )}
           </>
         )}

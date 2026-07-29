@@ -1,20 +1,5 @@
 @import '~typeface-montserrat';
 
-body {
-  margin: 0;
-  padding: 0;
-  background-image: url("../img/Fundo_Azul.png");
-  background-size: cover;
-  background-position: center;
-  font-family: Montserrat;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
 /* Estilos do componente Login */
 .login-container {
   text-align: center;
@@ -23,6 +8,17 @@ body {
   margin-top: 10vh;
   padding: 5px 30px 30px 30px;
 }
+
+.login-page {
+  background-image: url("../img/Fundo_Azul.png");
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  font-family: Montserrat;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
   .input-style {
     color: darkgray;
   }

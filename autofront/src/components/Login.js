@@ -37,6 +37,7 @@ const Login = () => {
         
         if (data.is_Logged == 1){
         const isLoginSuccessful = true;
+        localStorage.setItem('token', data.token);
         message.success('Login feito com sucesso');
 
         if (!data.is_Admin) {
@@ -67,9 +68,9 @@ const Login = () => {
   };
 
   return (
-    <div>
+    <div className="login-page">
       <Row justify="center" align="middle" style={{ minHeight: '100vh' }}>
-        <Col span={7}>
+        <Col xs={22} sm={16} md={12} lg={8} xl={7}>
           <div className="login-container" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}>
 
             {/* Div adicionada para o título do login */}
