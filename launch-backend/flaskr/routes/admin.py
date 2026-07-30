@@ -96,10 +96,13 @@ def update_submission_status():
         type=notif_types.get(new_status, "info"),
         registro_id=registro.id,
     )
-    db.session.add(notification)
+    # Don't notify admin about their own submissions
+    admin_username = get_jwt_identity()
+    admin_user = User.query.filter_by(username=admin_username).first()
+    if registro.user_id != admin_user.id:
+        db.session.add(notification)
     db.session.commit()
 
-    admin_username = get_jwt_identity()
     current_app.logger.info(
         "Admin %s set registro %d to '%s'", admin_username, registro_id, new_status
     )

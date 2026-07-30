@@ -120,15 +120,16 @@ def create_submissions():
         "User %s created %d submission(s)", user.username, len(created)
     )
 
-    # Notify all admins about new submissions
+    # Notify all admins about new submissions (except the submitter if they are admin)
     admins = User.query.filter_by(is_admin=True).all()
     for admin in admins:
-        notif = Notification(
-            user_id=admin.id,
-            message=f"{user.name} enviou {len(created)} atividade(s) para análise.",
-            type="info",
-        )
-        db.session.add(notif)
+        if admin.id != user.id:
+            notif = Notification(
+                user_id=admin.id,
+                message=f"{user.name} enviou {len(created)} atividade(s) para análise.",
+                type="info",
+            )
+            db.session.add(notif)
     db.session.commit()
 
     return jsonify({"mensagem": "Dados salvos com sucesso!"}), 201
