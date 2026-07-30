@@ -82,7 +82,31 @@ def update_submission_status():
         "Admin %s set registro %d to '%s'", admin_username, registro_id, new_status
     )
 
-    return jsonify({"status": "Atualizado", "registro": registro.to_dict()}), 200
+    # Warn admin if approval exceeds category limit
+    warning = None
+    if new_status == "Aprovado" and registro.category_id:
+        category = registro.category
+        if category:
+            approved_hours = db.session.query(
+                db.func.coalesce(db.func.sum(Registro.hours), 0)
+            ).filter(
+                Registro.user_id == registro.user_id,
+                Registro.category_id == category.id,
+                Registro.deleted_at.is_(None),
+                Registro.status == "Aprovado",
+            ).scalar()
+
+            if approved_hours > category.max_hours:
+                warning = (
+                    f"Atenção: o aluno agora tem {approved_hours}h aprovadas em '{category.name}' "
+                    f"(limite: {category.max_hours}h). Apenas {category.max_hours}h serão contabilizadas."
+                )
+
+    response = {"status": "Atualizado", "registro": registro.to_dict()}
+    if warning:
+        response["warning"] = warning
+
+    return jsonify(response), 200
 
 
 # ─── Categories CRUD ────────────────────────────────────────────────────────────

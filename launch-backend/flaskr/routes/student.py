@@ -80,6 +80,22 @@ def create_submissions():
             if not category:
                 return jsonify({"error": f"Categoria ID {category_id} não encontrada"}), 400
 
+            # Block submission only if student already reached max approved hours
+            approved_hours = db.session.query(
+                db.func.coalesce(db.func.sum(Registro.hours), 0)
+            ).filter(
+                Registro.user_id == user.id,
+                Registro.category_id == category.id,
+                Registro.deleted_at.is_(None),
+                Registro.status == "Aprovado",
+            ).scalar()
+
+            if approved_hours >= category.max_hours:
+                return jsonify({
+                    "error": f"Você já atingiu o limite de {category.max_hours}h aprovadas em '{category.name}'. "
+                             f"Não é possível enviar mais atividades nesta categoria."
+                }), 400
+
         certificate_raw = data.get("certificate", "")
         if isinstance(certificate_raw, list):
             certificate = ", ".join(certificate_raw)

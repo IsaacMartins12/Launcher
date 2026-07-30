@@ -38,8 +38,8 @@ class Registro(db.Model):
     def weighted_hours(self):
         """Calculate hours with category weight applied.
 
-        Caps hours at category max_hours — if a student submits 50h
-        but the category allows max 40h, only 40h are counted.
+        The cap is applied per-record as min(hours, max_hours).
+        The real accumulated cap is enforced at query/report level.
         """
         if self.category:
             capped = min(self.hours, self.category.max_hours)

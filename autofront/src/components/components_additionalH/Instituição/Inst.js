@@ -74,11 +74,15 @@ const Inst = () => {
       });
 
       if (response.ok) {
+        const result = await response.json();
         const updatedData = data.map((item) =>
           item.id === selectedActivity.id ? { ...item, status: updatedStatus, rejection_reason: body.rejection_reason || null } : item
         );
         setData(updatedData);
         message.success(`Atividade ${updatedStatus.toLowerCase()} com sucesso!`);
+        if (result.warning) {
+          message.warning(result.warning, 8);
+        }
       } else {
         message.error('Erro ao atualizar status.');
       }
