@@ -338,10 +338,10 @@ const Inst = () => {
         }}
       >
         {approvalAction ? (
-          <p>Tem certeza que deseja <strong>aprovar</strong> esta atividade?</p>
+          <p>Tem certeza que deseja aprovar esta atividade?</p>
         ) : (
           <div>
-            <p>Tem certeza que deseja <strong>rejeitar</strong> esta atividade?</p>
+            <p>Tem certeza que deseja rejeitar esta atividade?</p>
             <p style={{ marginTop: '12px', marginBottom: '4px' }}>Motivo da rejeição:</p>
             <Input.TextArea
               rows={3}
