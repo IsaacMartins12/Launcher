@@ -35,7 +35,12 @@ def list_all_submissions():
         current_app.config["MAX_PAGE_SIZE"],
     )
 
-    query = Registro.active().order_by(Registro.created_at.desc())
+    query = (
+        Registro.active()
+        .join(User)
+        .filter(User.institution_id == User.query.filter_by(username=get_jwt_identity()).first().institution_id)
+        .order_by(Registro.created_at.desc())
+    )
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
     return jsonify({
@@ -140,8 +145,9 @@ def update_submission_status():
 @admin_bp.route("/categories", methods=["GET"])
 @jwt_required()
 def list_categories():
-    """List all activity categories (available to all authenticated users)."""
-    categories = Category.query.order_by(Category.name).all()
+    """List all activity categories for the user's institution."""
+    user = User.query.filter_by(username=get_jwt_identity()).first()
+    categories = Category.query.filter_by(institution_id=user.institution_id).order_by(Category.name).all()
     return jsonify([c.to_dict() for c in categories]), 200
 
 
@@ -160,12 +166,14 @@ def create_category():
     except ValidationError as err:
         return jsonify({"error": "Dados inválidos", "detail": err.messages}), 400
 
-    # Check if name already exists
-    existing = Category.query.filter_by(name=data["name"]).first()
+    # Check if name already exists in this institution
+    user = User.query.filter_by(username=get_jwt_identity()).first()
+    existing = Category.query.filter_by(name=data["name"], institution_id=user.institution_id).first()
     if existing:
         return jsonify({"error": f"Categoria '{data['name']}' já existe"}), 409
 
     category = Category(
+        institution_id=user.institution_id,
         name=data["name"],
         max_hours=data["max_hours"],
         weight=data.get("weight", 1.0),

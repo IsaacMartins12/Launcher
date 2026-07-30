@@ -120,8 +120,8 @@ def create_submissions():
         "User %s created %d submission(s)", user.username, len(created)
     )
 
-    # Notify all admins about new submissions
-    admins = User.query.filter_by(is_admin=True).all()
+    # Notify all admins of the same institution about new submissions
+    admins = User.query.filter_by(institution_id=user.institution_id, is_admin=True).all()
     for admin in admins:
         notif = Notification(
             user_id=admin.id,

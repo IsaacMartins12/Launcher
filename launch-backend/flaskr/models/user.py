@@ -11,12 +11,14 @@ class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
+    institution_id = db.Column(db.Integer, db.ForeignKey("institutions.id"), nullable=False)
     name = db.Column(db.String(80), nullable=False)
     turma = db.Column(db.String(80), nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
 
+    institution = db.relationship("Institution", back_populates="users")
     registros = db.relationship("Registro", back_populates="user", lazy="dynamic")
 
     def __repr__(self):
@@ -55,4 +57,6 @@ class User(db.Model):
             "turma": self.turma,
             "username": self.username,
             "is_admin": bool(self.is_admin),
+            "institution_id": self.institution_id,
+            "institution": self.institution.name if self.institution else None,
         }
