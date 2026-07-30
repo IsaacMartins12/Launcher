@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Spin, Layout, Space, Tag, Input, Modal, Button, message, Radio, Card, Row, Col, Menu, Statistic, Tooltip } from 'antd';
-import { CheckOutlined, CloseOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, TeamOutlined, DashboardOutlined, UnorderedListOutlined, UndoOutlined } from '@ant-design/icons';
+import { Table, Spin, Layout, Space, Tag, Input, InputNumber, Modal, Button, message, Radio, Card, Row, Col, Menu, Statistic, Tooltip, Form } from 'antd';
+import { CheckOutlined, CloseOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, TeamOutlined, DashboardOutlined, UnorderedListOutlined, UndoOutlined, AppstoreOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
 const { Content, Sider } = Layout;
 
@@ -14,9 +14,14 @@ const Inst = () => {
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [currentView, setCurrentView] = useState('list');
   const [collapsed, setCollapsed] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [categoryForm] = Form.useForm();
 
   useEffect(() => {
     fetchData();
+    fetchCategories();
   }, []);
 
   const fetchData = async () => {
@@ -32,6 +37,91 @@ const Inst = () => {
       console.error('Erro ao buscar dados:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:2500/categories', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (Array.isArray(result)) setCategories(result);
+    } catch (error) {
+      console.error('Erro ao buscar categorias:', error);
+    }
+  };
+
+  const handleCreateCategory = () => {
+    setEditingCategory(null);
+    categoryForm.resetFields();
+    categoryForm.setFieldsValue({ weight: 1.0 });
+    setCategoryModalVisible(true);
+  };
+
+  const handleEditCategory = (cat) => {
+    setEditingCategory(cat);
+    categoryForm.setFieldsValue(cat);
+    setCategoryModalVisible(true);
+  };
+
+  const handleDeleteCategory = (cat) => {
+    Modal.confirm({
+      title: 'Excluir Categoria',
+      content: `Deseja excluir "${cat.name}"? Só é possível se não houver registros vinculados.`,
+      okText: 'Excluir',
+      okType: 'danger',
+      cancelText: 'Cancelar',
+      onOk: async () => {
+        const token = localStorage.getItem('token');
+        try {
+          const response = await fetch(`http://localhost:2500/categories/${cat.id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          if (response.ok) {
+            message.success('Categoria removida!');
+            fetchCategories();
+          } else {
+            const err = await response.json();
+            message.error(err.error || 'Erro ao excluir.');
+          }
+        } catch (error) {
+          message.error('Erro de conexão.');
+        }
+      },
+    });
+  };
+
+  const handleSaveCategory = async () => {
+    try {
+      const values = await categoryForm.validateFields();
+      const token = localStorage.getItem('token');
+      const url = editingCategory
+        ? `http://localhost:2500/categories/${editingCategory.id}`
+        : 'http://localhost:2500/categories';
+      const method = editingCategory ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (response.ok) {
+        message.success(editingCategory ? 'Categoria atualizada!' : 'Categoria criada!');
+        setCategoryModalVisible(false);
+        fetchCategories();
+      } else {
+        const err = await response.json();
+        message.error(err.error || 'Erro ao salvar.');
+      }
+    } catch (error) {
+      // validation error
     }
   };
 
@@ -187,6 +277,7 @@ const Inst = () => {
 
   const menuItems = [
     { key: 'list', icon: <UnorderedListOutlined />, label: 'Solicitações' },
+    { key: 'categories', icon: <AppstoreOutlined />, label: 'Categorias' },
     { key: 'dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
   ];
 
@@ -275,6 +366,46 @@ const Inst = () => {
     </div>
   );
 
+  const renderCategories = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+        <div>
+          <h3 style={{ margin: 0, color: '#333' }}>Categorias de Atividade</h3>
+          <p style={{ margin: 0, color: '#888', fontSize: '13px' }}>Gerencie categorias, pesos e limites de horas</p>
+        </div>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateCategory}>
+          Nova Categoria
+        </Button>
+      </div>
+      <Table
+        dataSource={categories}
+        pagination={false}
+        rowKey={(r) => r.id}
+        columns={[
+          { title: 'Nome', dataIndex: 'name', key: 'name' },
+          { title: 'Limite (h)', dataIndex: 'max_hours', key: 'max_hours', width: 100 },
+          { title: 'Peso', dataIndex: 'weight', key: 'weight', width: 80, render: (v) => `${v}x` },
+          { title: 'Descrição', dataIndex: 'description', key: 'description', ellipsis: true },
+          {
+            title: 'Ações',
+            key: 'actions',
+            width: 160,
+            render: (_, record) => (
+              <Space size="small">
+                <Button size="small" icon={<EditOutlined />} onClick={() => handleEditCategory(record)}>
+                  Editar
+                </Button>
+                <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteCategory(record)}>
+                  Excluir
+                </Button>
+              </Space>
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider
@@ -324,7 +455,9 @@ const Inst = () => {
 
           {/* Conteúdo principal */}
           <Card style={{ minHeight: '400px' }}>
-            {currentView === 'list' ? renderList() : renderDashboard()}
+            {currentView === 'list' && renderList()}
+            {currentView === 'categories' && renderCategories()}
+            {currentView === 'dashboard' && renderDashboard()}
           </Card>
         </Content>
       </Layout>
@@ -355,6 +488,31 @@ const Inst = () => {
             />
           </div>
         )}
+      </Modal>
+
+      {/* Modal Categoria */}
+      <Modal
+        title={editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
+        open={categoryModalVisible}
+        onOk={handleSaveCategory}
+        onCancel={() => setCategoryModalVisible(false)}
+        okText="Salvar"
+        cancelText="Cancelar"
+      >
+        <Form form={categoryForm} layout="vertical">
+          <Form.Item name="name" label="Nome" rules={[{ required: true, message: 'Informe o nome' }]}>
+            <Input placeholder="Ex: Monitoria" />
+          </Form.Item>
+          <Form.Item name="max_hours" label="Limite de Horas" rules={[{ required: true, message: 'Informe o limite' }]}>
+            <InputNumber min={1} max={500} style={{ width: '100%' }} placeholder="Máximo de horas aprovadas por aluno" />
+          </Form.Item>
+          <Form.Item name="weight" label="Peso" rules={[{ required: true, message: 'Informe o peso' }]}>
+            <InputNumber min={0.1} max={5} step={0.1} style={{ width: '100%' }} placeholder="Multiplicador (ex: 1.5)" />
+          </Form.Item>
+          <Form.Item name="description" label="Descrição">
+            <Input.TextArea rows={2} placeholder="Descrição da categoria (opcional)" maxLength={200} />
+          </Form.Item>
+        </Form>
       </Modal>
     </Layout>
   );
