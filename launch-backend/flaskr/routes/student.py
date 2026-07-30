@@ -7,7 +7,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 
 from flaskr.extensions import db
-from flaskr.models import User, Registro, Category
+from flaskr.models import User, Registro, Category, Notification
 from flaskr.schemas import SubmissionSchema
 
 student_bp = Blueprint("student", __name__)
@@ -119,6 +119,18 @@ def create_submissions():
     current_app.logger.info(
         "User %s created %d submission(s)", user.username, len(created)
     )
+
+    # Notify all admins about new submissions
+    admins = User.query.filter_by(is_admin=True).all()
+    for admin in admins:
+        notif = Notification(
+            user_id=admin.id,
+            message=f"{user.name} enviou {len(created)} atividade(s) para análise.",
+            type="info",
+        )
+        db.session.add(notif)
+    db.session.commit()
+
     return jsonify({"mensagem": "Dados salvos com sucesso!"}), 201
 
 
