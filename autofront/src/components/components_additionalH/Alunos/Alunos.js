@@ -31,11 +31,10 @@ const Aluno = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            const mapped = data.map(item => ({ ...item, submissionDate: item.created_at }));
-            setSubmittedActivities(mapped);
-          }
+        .then(result => {
+          const items = Array.isArray(result) ? result : (result.data || []);
+          const mapped = items.map(item => ({ ...item, submissionDate: item.created_at }));
+          setSubmittedActivities(mapped);
         })
         .catch(err => console.error('Erro ao buscar registros:', err));
 

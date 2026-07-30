@@ -26,9 +26,8 @@ const Inst = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
-      if (Array.isArray(result)) {
-        setData(result);
-      }
+      const items = Array.isArray(result) ? result : (result.data || []);
+      setData(items);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
     } finally {

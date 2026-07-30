@@ -1,11 +1,15 @@
 """Authentication routes (login/logout)."""
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token
+from marshmallow import ValidationError
 
 from flaskr.models import User
+from flaskr.schemas import LoginSchema
 
 auth_bp = Blueprint("auth", __name__)
+
+_login_schema = LoginSchema()
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -14,16 +18,18 @@ def login():
     if not request.is_json:
         return jsonify({"error": "Content-Type must be application/json"}), 400
 
-    data = request.get_json()
-    username = data.get("username", "").strip()
-    password = data.get("password", "")
+    try:
+        data = _login_schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify({"error": "Dados inválidos", "detail": err.messages}), 400
 
-    if not username or not password:
-        return jsonify({"error": "Campos obrigatórios: username, password"}), 400
+    username = data["username"].strip()
+    password = data["password"]
 
-    user = User.query.filter_by(username=username, password=password).first()
+    user = User.query.filter_by(username=username).first()
 
-    if not user:
+    if not user or not user.check_password(password):
+        current_app.logger.warning("Login failed for username: %s", username)
         return jsonify({
             "is_Logged": False,
             "is_Admin": False,
@@ -31,6 +37,7 @@ def login():
         }), 401
 
     access_token = create_access_token(identity=user.username)
+    current_app.logger.info("User %s logged in successfully", username)
 
     return jsonify({
         "is_Logged": True,

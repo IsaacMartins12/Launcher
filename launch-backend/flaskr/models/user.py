@@ -1,5 +1,7 @@
 """User model."""
 
+import bcrypt
+
 from flaskr.extensions import db
 
 
@@ -12,7 +14,7 @@ class User(db.Model):
     name = db.Column(db.String(80), nullable=False)
     turma = db.Column(db.String(80), nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
 
     registros = db.relationship("Registro", back_populates="user", lazy="dynamic")
@@ -20,8 +22,33 @@ class User(db.Model):
     def __repr__(self):
         return f"<User {self.username}>"
 
+    def set_password(self, raw_password):
+        """Hash and set the user password."""
+        self.password = bcrypt.hashpw(
+            raw_password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+
+    def check_password(self, raw_password):
+        """Verify a raw password against the stored hash.
+
+        Also handles legacy plaintext passwords by hashing them on first
+        successful comparison (migration strategy).
+        """
+        stored = self.password
+
+        # Legacy plaintext check (passwords that were not hashed yet)
+        if not stored.startswith("$2b$") and not stored.startswith("$2a$"):
+            if stored == raw_password:
+                # Migrate to hashed password on successful login
+                self.set_password(raw_password)
+                db.session.commit()
+                return True
+            return False
+
+        return bcrypt.checkpw(raw_password.encode("utf-8"), stored.encode("utf-8"))
+
     def to_dict(self):
-        """Serialize user to dictionary."""
+        """Serialize user to dictionary (never expose password)."""
         return {
             "id": self.id,
             "name": self.name,

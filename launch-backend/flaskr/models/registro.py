@@ -27,6 +27,15 @@ class Registro(db.Model):
     def __repr__(self):
         return f"<Registro {self.id} - {self.title}>"
 
+    @property
+    def is_deleted(self):
+        """Check if record was soft-deleted."""
+        return self.deleted_at is not None
+
+    def soft_delete(self):
+        """Mark record as deleted without removing from database."""
+        self.deleted_at = datetime.now(timezone.utc)
+
     def to_dict(self, include_user=False):
         """Serialize registro to dictionary."""
         data = {
@@ -41,4 +50,10 @@ class Registro(db.Model):
         }
         if include_user:
             data["aluno"] = self.user.name if self.user else "Desconhecido"
+            data["turma"] = self.user.turma if self.user else ""
         return data
+
+    @classmethod
+    def active(cls):
+        """Return query filtered to exclude soft-deleted records."""
+        return cls.query.filter(cls.deleted_at.is_(None))

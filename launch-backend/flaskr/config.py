@@ -1,6 +1,7 @@
 """Application configuration."""
 
 import os
+from datetime import timedelta
 
 
 class Config:
@@ -9,6 +10,7 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
     JWT_SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
     JWT_TOKEN_LOCATION = ["headers"]
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=8)
 
     MYSQL_USER = os.environ.get("MYSQL_USER", "root")
     MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "root")
@@ -19,6 +21,10 @@ class Config:
         f"mysql+mysqlconnector://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Pagination
+    DEFAULT_PAGE_SIZE = 20
+    MAX_PAGE_SIZE = 100
 
 
 class DevelopmentConfig(Config):
@@ -31,6 +37,7 @@ class ProductionConfig(Config):
     """Production configuration."""
 
     DEBUG = False
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=4)
 
 
 config_by_name = {

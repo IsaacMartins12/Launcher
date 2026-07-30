@@ -1,12 +1,16 @@
 """Profile routes — view and update user profile."""
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from marshmallow import ValidationError
 
 from flaskr.extensions import db
 from flaskr.models import User
+from flaskr.schemas import ProfileUpdateSchema
 
 profile_bp = Blueprint("profile", __name__)
+
+_profile_schema = ProfileUpdateSchema()
 
 
 @profile_bp.route("/perfil", methods=["GET"])
@@ -31,17 +35,18 @@ def update_profile():
     if not request.is_json:
         return jsonify({"error": "Content-Type must be application/json"}), 400
 
-    data = request.get_json()
+    try:
+        data = _profile_schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify({"error": "Dados inválidos", "detail": err.messages}), 400
 
-    name = data.get("name", "").strip()
-    turma = data.get("turma", "").strip()
-
-    if name:
-        user.name = name
-    if turma:
-        user.turma = turma
+    if data.get("name"):
+        user.name = data["name"]
+    if data.get("turma"):
+        user.turma = data["turma"]
 
     db.session.commit()
+    current_app.logger.info("User %s updated profile", user.username)
     return jsonify({"mensagem": "Perfil atualizado com sucesso!", "user": user.to_dict()}), 200
 
 
