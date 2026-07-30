@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Button, Upload, Input, Select, InputNumber } from 'antd';
+import { Form, Button, Upload, Input, Select, InputNumber, message } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import CertificateList from './CertificateList';
 
@@ -36,6 +36,10 @@ const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileLi
     form
       .validateFields(['title', 'category_id', 'hours'])
       .then((values) => {
+        if (!fileList || fileList.length === 0) {
+          message.warning('Anexe o comprovante da atividade.');
+          return;
+        }
         const selectedCategory = categories.find(c => c.id === values.category_id);
         onFinish({
           ...values,
@@ -55,11 +59,7 @@ const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileLi
 
   return (
     <div>
-      <div style={{ color: '#0f4abe' }}>
-        <h2 style={{ marginBottom: '4px' }}>Adicionar Atividade</h2>
-        <div style={{ borderBottom: '3px solid #ccc', marginBottom: '12px', marginTop: '0px' }}></div>
-      </div>
-      <Form form={form} onFinish={handleSubmit} layout="vertical">
+      <Form form={form} layout="vertical">
         <Form.Item
           label="Título"
           name="title"
@@ -93,17 +93,11 @@ const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileLi
           <InputNumber min={1} max={500} style={{ width: '100%' }} placeholder="Carga horária" />
         </Form.Item>
 
-        <Form.Item
-          label="Comprovante"
-          name="certificate"
-          valuePropName="fileList"
-          getValueFromEvent={handleUploadChange}
-          rules={[{ required: true, message: 'Anexe o comprovante' }]}
-        >
+        <Form.Item label="Comprovante">
           <Upload
-            name="logo"
+            name="file"
             listType="picture"
-            accept=".pdf, .jpg, .jpeg, .png"
+            accept=".pdf,.jpg,.jpeg,.png"
             fileList={fileList}
             beforeUpload={() => false}
             onRemove={handleRemove}
@@ -112,9 +106,8 @@ const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileLi
             <Button icon={<UploadOutlined />}>Fazer Upload</Button>
           </Upload>
         </Form.Item>
-        <CertificateList fileList={fileList} onRemove={handleRemove} />
         <Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" onClick={handleSubmit}>
             Ok
           </Button>
         </Form.Item>
