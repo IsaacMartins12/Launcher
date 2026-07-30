@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Button, Space, Table, Tag, Modal, message, Radio } from 'antd';
-import { PlusOutlined, SendOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import CustomHeader from '../Header_additionalH';
+import { Layout, Button, Space, Table, Tag, Modal, message, Radio, Card, Row, Col, Menu, Statistic } from 'antd';
+import { PlusOutlined, SendOutlined, EditOutlined, DeleteOutlined, CloudUploadOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, HistoryOutlined } from '@ant-design/icons';
 import ActivityForm from './ActivityForm';
 import CertificateList from './CertificateList';
 import moment from 'moment';
 
-const { Content } = Layout;
+const { Content, Sider } = Layout;
 
 const Aluno = () => {
   const [activities, setActivities] = useState([]);
@@ -15,8 +14,8 @@ const Aluno = () => {
   const [selectedButton, setSelectedButton] = useState('send');
   const [fileList, setFileList] = useState([]);
   const [statusFilter, setStatusFilter] = useState('Todos');
+  const [collapsed, setCollapsed] = useState(false);
 
-  // Buscar registros do backend ao carregar
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -37,7 +36,6 @@ const Aluno = () => {
     }
   }, []);
 
-
   const onFinishActivity = (values) => {
     setActivities([...activities, values]);
     setModalVisible(false);
@@ -45,7 +43,6 @@ const Aluno = () => {
 
   const addActivity = () => {
     setModalVisible(true);
-    setSelectedButton('send');
   };
 
   const handleSend = async () => {
@@ -74,19 +71,14 @@ const Aluno = () => {
         setSubmittedActivities([...submittedActivities, ...submitted]);
         setActivities([]);
         setSelectedButton('status');
-        message.success('Activities sent successfully.');
+        message.success('Atividades enviadas com sucesso!');
       } else {
-        message.error('Failed to send activities. Please try again.');
+        message.error('Erro ao enviar atividades.');
       }
     } catch (error) {
       console.error('Error sending activities:', error);
-      message.error('An error occurred. Please try again.');
+      message.error('Erro de conexão com o servidor.');
     }
-  };
-
-
-  const onEditActivity = (record, index) => {
-    console.log('Edit activity:', record, index);
   };
 
   const onDeleteActivity = (index) => {
@@ -106,6 +98,12 @@ const Aluno = () => {
     setActivities(updatedActivities);
   };
 
+  // Estatísticas
+  const totalHours = submittedActivities.reduce((acc, item) => acc + (item.hours || 0), 0);
+  const approvedHours = submittedActivities.filter(i => i.status === 'Aprovado').reduce((acc, item) => acc + (item.hours || 0), 0);
+  const pendingCount = submittedActivities.filter(i => i.status === 'Em Análise').length;
+  const rejectedCount = submittedActivities.filter(i => i.status === 'Rejeitado').length;
+
   const columns = [
     { title: 'Título', dataIndex: 'title', key: 'title' },
     { title: 'Tipo', dataIndex: 'type', key: 'type' },
@@ -122,14 +120,9 @@ const Aluno = () => {
       title: 'Ação',
       key: 'action',
       render: (text, record, index) => (
-        <Space size="middle">
-          <span onClick={() => onEditActivity(record, index)} style={{ cursor: 'pointer' }}>
-            <EditOutlined />
-          </span>
-          <span onClick={() => onDeleteActivity(index)} style={{ cursor: 'pointer' }}>
-            <DeleteOutlined />
-          </span>
-        </Space>
+        <Button danger size="small" icon={<DeleteOutlined />} onClick={() => onDeleteActivity(index)}>
+          Remover
+        </Button>
       ),
     },
   ];
@@ -137,176 +130,221 @@ const Aluno = () => {
   const submittedColumns = [
     { title: 'Título', dataIndex: 'title', key: 'title' },
     { title: 'Tipo', dataIndex: 'type', key: 'type' },
-    { title: 'Horas', dataIndex: 'hours', key: 'hours' },
+    { title: 'Horas', dataIndex: 'hours', key: 'hours', width: 80 },
     {
       title: 'Comprovante',
       dataIndex: 'certificate',
       key: 'certificate',
-      render: (text, record) => (
-        <a href={text} target="_blank" rel="noopener noreferrer">
-          {text}
-        </a>
+      ellipsis: true,
+      render: (text) => (
+        <a href={text} target="_blank" rel="noopener noreferrer">{text}</a>
       ),
     },
     {
       title: 'Status',
       key: 'status',
+      width: 120,
       render: (text, record) => (
         <Tag color={record.status === 'Aprovado' ? 'green' : record.status === 'Rejeitado' ? 'red' : 'blue'}>
           {record.status}
         </Tag>
       ),
     },
-    
-      {
-        title: 'Justificativa',
-        dataIndex: 'rejection_reason',
-        key: 'rejection_reason',
-        render: (text) => text ? <Tag color="orange">{text}</Tag> : '-',
-      },
     {
-      title: 'Data de Envio',
+      title: 'Justificativa',
+      dataIndex: 'rejection_reason',
+      key: 'rejection_reason',
+      render: (text) => text ? <Tag color="orange">{text}</Tag> : '-',
+    },
+    {
+      title: 'Data',
       dataIndex: 'submissionDate',
       key: 'submissionDate',
-      render: (text) => new Date(text).toLocaleDateString(), // Mostra apenas a data
+      width: 110,
+      render: (text) => text ? new Date(text).toLocaleDateString() : '-',
     },
   ];
 
-  const HoursColumns = [
-    { title: 'Horas Cumpridas', dataIndex: 'hoursWorked', key: 'hoursWorked' },
-    { title: 'Horas Restantes', dataIndex: 'hoursLeft', key: 'hoursLeft' },
-    { title: 'Horas Necessárias', dataIndex: 'hoursRequired', key: 'hoursRequired' },
+  const menuItems = [
+    { key: 'send', icon: <CloudUploadOutlined />, label: 'Enviar' },
+    { key: 'status', icon: <HistoryOutlined />, label: 'Histórico' },
+    { key: 'view', icon: <CheckCircleOutlined />, label: 'Resumo' },
   ];
 
-  return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <CustomHeader />
-      <Content style={{ padding: '16px', backgroundColor: '#fff' }}>
-        <div style={{ color: '#0f4abe', marginBottom: '8px' }}><h2 style={{ margin: 0 }}>Horas Complementares</h2></div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <Space size={12} wrap>
-            <Button
-              type="text"
-              style={{
-                fontWeight: selectedButton === 'send' ? 'bold' : 'normal',
-                color: selectedButton === 'send' ? '#0f72be' : 'inherit',
-                padding: '4px 8px',
-              }}
-              onClick={() => setSelectedButton('send')}
-            >
-              Enviar
-            </Button>
-            <Button
-              type="text"
-              style={{
-                fontWeight: selectedButton === 'status' ? 'bold' : 'normal',
-                color: selectedButton === 'status' ? '#0f72be' : 'inherit',
-                padding: '4px 8px',
-              }}
-              onClick={() => setSelectedButton('status')}
-            >
-              Status
-            </Button>
-            <Button
-              type="text"
-              style={{
-                fontWeight: selectedButton === 'view' ? 'bold' : 'normal',
-                color: selectedButton === 'view' ? '#0f72be' : 'inherit',
-                padding: '4px 8px',
-              }}
-              onClick={() => { setModalVisible(false); setSelectedButton('view'); }}
-            >
-              Horas
-            </Button>
-          </Space>
-          {selectedButton === 'send' && (
-            <Space wrap>
+  const renderContent = () => {
+    if (selectedButton === 'send') {
+      return (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <h3 style={{ margin: 0, color: '#333' }}>Enviar Atividades</h3>
+              <p style={{ margin: 0, color: '#888', fontSize: '13px' }}>Adicione atividades e envie para aprovação</p>
+            </div>
+            <Space>
               <Button icon={<PlusOutlined />} onClick={addActivity} type="primary">
-                Adicionar Atividade
+                Adicionar
               </Button>
               {activities.length > 0 && (
-                <Button icon={<SendOutlined />} type="primary" onClick={handleSend}>
-                  Enviar
+                <Button icon={<SendOutlined />} type="primary" style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }} onClick={handleSend}>
+                  Enviar ({activities.length})
                 </Button>
               )}
             </Space>
-          )}
-        </div>
-        <div style={{ borderBottom: '2px solid #e8e8e8', marginBottom: '12px' }}></div>
-        <Modal
-          open={modalVisible}
-          onCancel={() => setModalVisible(false)}
-          footer={null}
-          width="90%"
-          style={{ maxWidth: '500px', top: 20 }}
-        >
-          {/* Usando o componente ActivityForm para enviar atividades */}
-          <ActivityForm
-            onFinish={onFinishActivity}
-            activities={activities}
-            setActivities={setActivities}
-            fileList={fileList}
-            setFileList={setFileList}
-          />
-        </Modal>
-
-        {selectedButton === 'view' ? (
-          <div style={{ textAlign: 'center', marginTop: '20px' }}>
-            {selectedButton === 'status' ? (
-              <>
-                <h2>Status de Envios</h2>
-                <Table dataSource={submittedActivities} columns={submittedColumns} pagination={false} />
-              </>
-            ) : (
-              <>
-                <Table dataSource={submittedActivities} columns={HoursColumns} pagination={false} />
-              </>
-            )}
           </div>
-        ) : (
-          <>
-            {selectedButton === 'status' ? (
-              <div>
-                <div style={{ marginBottom: '12px' }}>
-                  <Radio.Group
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    optionType="button"
-                    buttonStyle="solid"
-                    size="small"
-                  >
-                    <Radio.Button value="Todos">Todos</Radio.Button>
-                    <Radio.Button value="Em Análise">Pendentes</Radio.Button>
-                    <Radio.Button value="Aprovado">Aprovados</Radio.Button>
-                    <Radio.Button value="Rejeitado">Rejeitados</Radio.Button>
-                  </Radio.Group>
-                </div>
-                <Table
-                  dataSource={statusFilter === 'Todos' ? submittedActivities : submittedActivities.filter(i => i.status === statusFilter)}
-                  columns={submittedColumns}
-                  pagination={false}
-                  scroll={{ x: 600 }}
-                />
-              </div>
-            ) : selectedButton === 'hours' ? (
-              <>
-                <h2>Horas Complementares</h2>
-                <Table
-                  dataSource={submittedActivities} // Substitua isso pelos dados reais da tabela de horas
-                  columns={[
-                    { title: 'Data', dataIndex: 'submissionDate', key: 'submissionDate', render: (text) => new Date(text).toLocaleDateString() },
-                    { title: 'Horas', dataIndex: 'hours', key: 'hours' },
-                    // Adicione mais colunas conforme necessário
-                  ]}
-                  pagination={false}
-                />
-              </>
-            ) : (
-              <Table dataSource={activities} columns={columns} pagination={false} scroll={{ x: 600 }} />
-            )}
-          </>
-        )}
-      </Content>
+          <Table
+            dataSource={activities}
+            columns={columns}
+            pagination={false}
+            scroll={{ x: 600 }}
+            locale={{ emptyText: 'Nenhuma atividade adicionada. Clique em "Adicionar" para começar.' }}
+          />
+        </div>
+      );
+    }
+
+    if (selectedButton === 'status') {
+      return (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+            <div>
+              <h3 style={{ margin: 0, color: '#333' }}>Histórico de Envios</h3>
+              <p style={{ margin: 0, color: '#888', fontSize: '13px' }}>Acompanhe o status das suas solicitações</p>
+            </div>
+            <Radio.Group
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+              size="small"
+            >
+              <Radio.Button value="Todos">Todos ({submittedActivities.length})</Radio.Button>
+              <Radio.Button value="Em Análise">Pendentes ({pendingCount})</Radio.Button>
+              <Radio.Button value="Aprovado">Aprovados ({submittedActivities.filter(i => i.status === 'Aprovado').length})</Radio.Button>
+              <Radio.Button value="Rejeitado">Rejeitados ({rejectedCount})</Radio.Button>
+            </Radio.Group>
+          </div>
+          <Table
+            dataSource={statusFilter === 'Todos' ? submittedActivities : submittedActivities.filter(i => i.status === statusFilter)}
+            columns={submittedColumns}
+            pagination={{ pageSize: 8 }}
+            scroll={{ x: 700 }}
+            rowKey={(record) => record.id || Math.random()}
+          />
+        </div>
+      );
+    }
+
+    if (selectedButton === 'view') {
+      return (
+        <div>
+          <h3 style={{ margin: '0 0 16px', color: '#333' }}>Resumo de Horas</h3>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={8}>
+              <Card bordered style={{ textAlign: 'center' }}>
+                <Statistic title="Total Enviado" value={totalHours} suffix="h" valueStyle={{ color: '#1890ff' }} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Card bordered style={{ textAlign: 'center' }}>
+                <Statistic title="Aprovadas" value={approvedHours} suffix="h" valueStyle={{ color: '#52c41a' }} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Card bordered style={{ textAlign: 'center' }}>
+                <Statistic title="Meta" value={200} suffix="h" valueStyle={{ color: '#666' }} />
+              </Card>
+            </Col>
+          </Row>
+          <Card style={{ marginTop: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontWeight: 500 }}>Progresso</span>
+              <span style={{ color: '#888' }}>{approvedHours}/200h</span>
+            </div>
+            <div style={{ width: '100%', backgroundColor: '#f0f0f0', borderRadius: '8px', height: '12px', overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min((approvedHours / 200) * 100, 100)}%`, backgroundColor: '#52c41a', height: '100%', borderRadius: '8px', transition: 'width 0.3s' }}></div>
+            </div>
+          </Card>
+          <Card title="Detalhamento por Status" style={{ marginTop: '16px' }}>
+            <Row gutter={[16, 8]}>
+              <Col span={8}><Statistic title="Pendentes" value={pendingCount} prefix={<ClockCircleOutlined style={{ color: '#1890ff' }} />} /></Col>
+              <Col span={8}><Statistic title="Aprovados" value={submittedActivities.filter(i => i.status === 'Aprovado').length} prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />} /></Col>
+              <Col span={8}><Statistic title="Rejeitados" value={rejectedCount} prefix={<CloseCircleOutlined style={{ color: '#ff4d4f' }} />} /></Col>
+            </Row>
+          </Card>
+        </div>
+      );
+    }
+  };
+
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={(val) => setCollapsed(val)}
+        breakpoint="md"
+        collapsedWidth={60}
+        style={{ backgroundColor: '#001529' }}
+      >
+        <div style={{ height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: collapsed ? '14px' : '16px' }}>
+          {collapsed ? 'HC' : 'Horas Comp.'}
+        </div>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[selectedButton]}
+          onClick={(e) => setSelectedButton(e.key)}
+          items={menuItems}
+        />
+      </Sider>
+      <Layout>
+        <Content style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+          {/* Cards de resumo no topo */}
+          <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+            <Col xs={12} sm={6}>
+              <Card size="small" bordered={false} style={{ backgroundColor: '#fff', borderLeft: '3px solid #1890ff' }}>
+                <Statistic title="Enviadas" value={submittedActivities.length} valueStyle={{ fontSize: '20px' }} prefix={<CloudUploadOutlined style={{ color: '#1890ff' }} />} />
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" bordered={false} style={{ backgroundColor: '#fff', borderLeft: '3px solid #faad14' }}>
+                <Statistic title="Pendentes" value={pendingCount} valueStyle={{ fontSize: '20px' }} prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />} />
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" bordered={false} style={{ backgroundColor: '#fff', borderLeft: '3px solid #52c41a' }}>
+                <Statistic title="Aprovadas" value={approvedHours} suffix="h" valueStyle={{ fontSize: '20px' }} prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />} />
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" bordered={false} style={{ backgroundColor: '#fff', borderLeft: '3px solid #ff4d4f' }}>
+                <Statistic title="Rejeitadas" value={rejectedCount} valueStyle={{ fontSize: '20px' }} prefix={<CloseCircleOutlined style={{ color: '#ff4d4f' }} />} />
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Conteúdo principal */}
+          <Card style={{ minHeight: '400px' }}>
+            {renderContent()}
+          </Card>
+        </Content>
+      </Layout>
+
+      <Modal
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        footer={null}
+        width="90%"
+        style={{ maxWidth: '500px', top: 20 }}
+      >
+        <ActivityForm
+          onFinish={onFinishActivity}
+          activities={activities}
+          setActivities={setActivities}
+          fileList={fileList}
+          setFileList={setFileList}
+        />
+      </Modal>
     </Layout>
   );
 };

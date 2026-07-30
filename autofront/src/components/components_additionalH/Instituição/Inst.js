@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Spin, Layout, Space, Tag, Input, Modal, Button, message, Radio } from 'antd';
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import CustomHeader from '../Header_additionalH';
+import { Table, Spin, Layout, Space, Tag, Input, Modal, Button, message, Radio, Card, Row, Col, Menu, Statistic } from 'antd';
+import { CheckOutlined, CloseOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, TeamOutlined, DashboardOutlined, UnorderedListOutlined } from '@ant-design/icons';
 
-const { Content } = Layout;
+const { Content, Sider } = Layout;
 
 const Inst = () => {
   const [data, setData] = useState([]);
@@ -13,6 +12,8 @@ const Inst = () => {
   const [approvalAction, setApprovalAction] = useState(true);
   const [rejectionReason, setRejectionReason] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
+  const [currentView, setCurrentView] = useState('list');
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -74,9 +75,8 @@ const Inst = () => {
       });
 
       if (response.ok) {
-        // Atualiza localmente
         const updatedData = data.map((item) =>
-          item.id === selectedActivity.id ? { ...item, status: updatedStatus } : item
+          item.id === selectedActivity.id ? { ...item, status: updatedStatus, rejection_reason: body.rejection_reason || null } : item
         );
         setData(updatedData);
         message.success(`Atividade ${updatedStatus.toLowerCase()} com sucesso!`);
@@ -93,39 +93,20 @@ const Inst = () => {
   };
 
   const pendingCount = data.filter(item => item.status === 'Em Análise').length;
+  const approvedCount = data.filter(item => item.status === 'Aprovado').length;
+  const rejectedCount = data.filter(item => item.status === 'Rejeitado').length;
+  const totalHours = data.filter(i => i.status === 'Aprovado').reduce((acc, item) => acc + (item.hours || 0), 0);
 
   const filteredData = statusFilter === 'Todos'
     ? data
     : data.filter(item => item.status === statusFilter);
 
   const columns = [
-    {
-      title: 'Aluno',
-      dataIndex: 'aluno',
-      key: 'aluno',
-    },
-    {
-      title: 'Título',
-      dataIndex: 'title',
-      key: 'title',
-    },
-    {
-      title: 'Tipo',
-      dataIndex: 'type',
-      key: 'type',
-    },
-    {
-      title: 'Horas',
-      dataIndex: 'hours',
-      key: 'hours',
-      width: 80,
-    },
-    {
-      title: 'Certificado',
-      dataIndex: 'certificate',
-      key: 'certificate',
-      ellipsis: true,
-    },
+    { title: 'Aluno', dataIndex: 'aluno', key: 'aluno' },
+    { title: 'Título', dataIndex: 'title', key: 'title' },
+    { title: 'Tipo', dataIndex: 'type', key: 'type' },
+    { title: 'Horas', dataIndex: 'hours', key: 'hours', width: 70 },
+    { title: 'Certificado', dataIndex: 'certificate', key: 'certificate', ellipsis: true },
     {
       title: 'Status',
       dataIndex: 'status',
@@ -169,67 +150,177 @@ const Inst = () => {
     },
   ];
 
+  const menuItems = [
+    { key: 'list', icon: <UnorderedListOutlined />, label: 'Solicitações' },
+    { key: 'dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
+  ];
+
+  const renderDashboard = () => (
+    <div>
+      <h3 style={{ margin: '0 0 16px', color: '#333' }}>Painel Geral</h3>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12}>
+          <Card bordered>
+            <Statistic title="Total de Horas Aprovadas" value={totalHours} suffix="h" valueStyle={{ color: '#52c41a', fontSize: '28px' }} prefix={<CheckCircleOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Card bordered>
+            <Statistic title="Total de Solicitações" value={data.length} valueStyle={{ color: '#1890ff', fontSize: '28px' }} prefix={<TeamOutlined />} />
+          </Card>
+        </Col>
+      </Row>
+      <Card title="Distribuição por Status" style={{ marginTop: '16px' }}>
+        <Row gutter={[16, 16]}>
+          <Col xs={8}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#faad14' }}>{pendingCount}</div>
+              <div style={{ color: '#888' }}>Pendentes</div>
+            </div>
+          </Col>
+          <Col xs={8}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#52c41a' }}>{approvedCount}</div>
+              <div style={{ color: '#888' }}>Aprovadas</div>
+            </div>
+          </Col>
+          <Col xs={8}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#ff4d4f' }}>{rejectedCount}</div>
+              <div style={{ color: '#888' }}>Rejeitadas</div>
+            </div>
+          </Col>
+        </Row>
+      </Card>
+      <Card title="Últimas Ações" style={{ marginTop: '16px' }}>
+        <Table
+          dataSource={data.filter(i => i.status !== 'Em Análise').slice(-5).reverse()}
+          columns={[
+            { title: 'Aluno', dataIndex: 'aluno', key: 'aluno' },
+            { title: 'Título', dataIndex: 'title', key: 'title' },
+            { title: 'Status', dataIndex: 'status', key: 'status', render: (t) => <Tag color={t === 'Aprovado' ? 'green' : 'red'}>{t}</Tag> },
+          ]}
+          pagination={false}
+          size="small"
+          rowKey={(r) => r.id}
+        />
+      </Card>
+    </div>
+  );
+
+  const renderList = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+        <div>
+          <h3 style={{ margin: 0, color: '#333' }}>Solicitações</h3>
+          <p style={{ margin: 0, color: '#888', fontSize: '13px' }}>Gerencie as solicitações de horas complementares</p>
+        </div>
+        <Radio.Group
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          optionType="button"
+          buttonStyle="solid"
+          size="small"
+        >
+          <Radio.Button value="Todos">Todos ({data.length})</Radio.Button>
+          <Radio.Button value="Em Análise">Pendentes ({pendingCount})</Radio.Button>
+          <Radio.Button value="Aprovado">Aprovados ({approvedCount})</Radio.Button>
+          <Radio.Button value="Rejeitado">Rejeitados ({rejectedCount})</Radio.Button>
+        </Radio.Group>
+      </div>
+      <Spin spinning={loading}>
+        <Table
+          dataSource={filteredData}
+          columns={columns}
+          pagination={{ pageSize: 10 }}
+          scroll={{ x: 800 }}
+          rowKey={(record) => record.id}
+        />
+      </Spin>
+    </div>
+  );
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <CustomHeader />
-      <Content style={{ padding: '16px', backgroundColor: '#fff' }}>
-        <div style={{ color: '#0f4abe', marginBottom: '8px' }}>
-          <h2 style={{ margin: 0 }}>Solicitações de Horas Complementares</h2>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={(val) => setCollapsed(val)}
+        breakpoint="md"
+        collapsedWidth={60}
+        style={{ backgroundColor: '#001529' }}
+      >
+        <div style={{ height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: collapsed ? '14px' : '16px' }}>
+          {collapsed ? 'AD' : 'Admin'}
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-          <Radio.Group
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            optionType="button"
-            buttonStyle="solid"
-            size="small"
-          >
-            <Radio.Button value="Todos">Todos ({data.length})</Radio.Button>
-            <Radio.Button value="Em Análise">Pendentes ({data.filter(i => i.status === 'Em Análise').length})</Radio.Button>
-            <Radio.Button value="Aprovado">Aprovados ({data.filter(i => i.status === 'Aprovado').length})</Radio.Button>
-            <Radio.Button value="Rejeitado">Rejeitados ({data.filter(i => i.status === 'Rejeitado').length})</Radio.Button>
-          </Radio.Group>
-        </div>
-        <div style={{ borderBottom: '2px solid #e8e8e8', marginBottom: '12px' }}></div>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[currentView]}
+          onClick={(e) => setCurrentView(e.key)}
+          items={menuItems}
+        />
+      </Sider>
+      <Layout>
+        <Content style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+          {/* Cards resumo no topo */}
+          <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+            <Col xs={12} sm={6}>
+              <Card size="small" bordered={false} style={{ backgroundColor: '#fff', borderLeft: '3px solid #1890ff' }}>
+                <Statistic title="Total" value={data.length} valueStyle={{ fontSize: '20px' }} prefix={<TeamOutlined style={{ color: '#1890ff' }} />} />
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" bordered={false} style={{ backgroundColor: '#fff', borderLeft: '3px solid #faad14' }}>
+                <Statistic title="Pendentes" value={pendingCount} valueStyle={{ fontSize: '20px' }} prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />} />
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" bordered={false} style={{ backgroundColor: '#fff', borderLeft: '3px solid #52c41a' }}>
+                <Statistic title="Aprovadas" value={approvedCount} valueStyle={{ fontSize: '20px' }} prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />} />
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" bordered={false} style={{ backgroundColor: '#fff', borderLeft: '3px solid #ff4d4f' }}>
+                <Statistic title="Rejeitadas" value={rejectedCount} valueStyle={{ fontSize: '20px' }} prefix={<CloseCircleOutlined style={{ color: '#ff4d4f' }} />} />
+              </Card>
+            </Col>
+          </Row>
 
-        <Spin spinning={loading}>
-          <Table
-            dataSource={filteredData}
-            columns={columns}
-            pagination={{ pageSize: 10 }}
-            scroll={{ x: 700 }}
-            rowKey={(record) => record.id}
-          />
-        </Spin>
+          {/* Conteúdo principal */}
+          <Card style={{ minHeight: '400px' }}>
+            {currentView === 'list' ? renderList() : renderDashboard()}
+          </Card>
+        </Content>
+      </Layout>
 
-        <Modal
-          title={approvalAction ? 'Confirmar Aprovação' : 'Confirmar Rejeição'}
-          open={confirmModalVisible}
-          onOk={handleConfirm}
-          onCancel={() => setConfirmModalVisible(false)}
-          okText="Confirmar"
-          cancelText="Cancelar"
-          okButtonProps={{
-            danger: !approvalAction,
-            style: approvalAction ? { backgroundColor: '#52c41a', borderColor: '#52c41a' } : {},
-          }}
-        >
-          {approvalAction ? (
-            <p>Tem certeza que deseja <strong>aprovar</strong> esta atividade?</p>
-          ) : (
-            <div>
-              <p>Tem certeza que deseja <strong>rejeitar</strong> esta atividade?</p>
-              <p style={{ marginTop: '12px', marginBottom: '4px' }}>Motivo da rejeição:</p>
-              <Input.TextArea
-                rows={3}
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Descreva o motivo..."
-              />
-            </div>
-          )}
-        </Modal>
-      </Content>
+      <Modal
+        title={approvalAction ? 'Confirmar Aprovação' : 'Confirmar Rejeição'}
+        open={confirmModalVisible}
+        onOk={handleConfirm}
+        onCancel={() => setConfirmModalVisible(false)}
+        okText="Confirmar"
+        cancelText="Cancelar"
+        okButtonProps={{
+          danger: !approvalAction,
+          style: approvalAction ? { backgroundColor: '#52c41a', borderColor: '#52c41a' } : {},
+        }}
+      >
+        {approvalAction ? (
+          <p>Tem certeza que deseja <strong>aprovar</strong> esta atividade?</p>
+        ) : (
+          <div>
+            <p>Tem certeza que deseja <strong>rejeitar</strong> esta atividade?</p>
+            <p style={{ marginTop: '12px', marginBottom: '4px' }}>Motivo da rejeição:</p>
+            <Input.TextArea
+              rows={3}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Descreva o motivo..."
+            />
+          </div>
+        )}
+      </Modal>
     </Layout>
   );
 };
