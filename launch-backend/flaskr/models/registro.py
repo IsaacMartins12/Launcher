@@ -36,9 +36,14 @@ class Registro(db.Model):
 
     @property
     def weighted_hours(self):
-        """Calculate hours with category weight applied."""
-        if self.category and self.category.weight:
-            return self.hours * self.category.weight
+        """Calculate hours with category weight applied.
+
+        Caps hours at category max_hours — if a student submits 50h
+        but the category allows max 40h, only 40h are counted.
+        """
+        if self.category:
+            capped = min(self.hours, self.category.max_hours)
+            return capped * self.category.weight
         return float(self.hours)
 
     def soft_delete(self):

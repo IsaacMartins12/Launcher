@@ -80,11 +80,6 @@ def create_submissions():
             if not category:
                 return jsonify({"error": f"Categoria ID {category_id} não encontrada"}), 400
 
-            # Validate hours limit per category for this user
-            error = _check_category_limit(user.id, category, data["hours"])
-            if error:
-                return jsonify({"error": error}), 400
-
         certificate_raw = data.get("certificate", "")
         if isinstance(certificate_raw, list):
             certificate = ", ".join(certificate_raw)
@@ -165,11 +160,6 @@ def update_submission(registro_id):
         if not category:
             return jsonify({"error": f"Categoria ID {category_id} não encontrada"}), 400
 
-        # Check limit excluding current registro hours
-        error = _check_category_limit(user.id, category, data["hours"], exclude_id=registro_id)
-        if error:
-            return jsonify({"error": error}), 400
-
     registro.title = data["title"]
     registro.type = category.name if category else data["type"]
     registro.hours = data["hours"]
@@ -220,36 +210,3 @@ def _get_current_user():
     """Retrieve the authenticated user from JWT identity."""
     username = get_jwt_identity()
     return User.query.filter_by(username=username).first()
-
-
-def _check_category_limit(user_id, category, new_hours, exclude_id=None):
-    """Check if adding new_hours would exceed category limit for user.
-
-    Returns error message string if exceeded, None if ok.
-    """
-    query = (
-        Registro.active()
-        .filter_by(user_id=user_id, category_id=category.id)
-        .filter(Registro.status != "Rejeitado")
-    )
-
-    if exclude_id:
-        query = query.filter(Registro.id != exclude_id)
-
-    current_hours = db.session.query(db.func.coalesce(db.func.sum(Registro.hours), 0)).filter(
-        Registro.user_id == user_id,
-        Registro.category_id == category.id,
-        Registro.deleted_at.is_(None),
-        Registro.status != "Rejeitado",
-        *([Registro.id != exclude_id] if exclude_id else []),
-    ).scalar()
-
-    if current_hours + new_hours > category.max_hours:
-        remaining = category.max_hours - current_hours
-        return (
-            f"Limite excedido para '{category.name}': "
-            f"máximo {category.max_hours}h, você já tem {current_hours}h, "
-            f"restam {remaining}h"
-        )
-
-    return None
