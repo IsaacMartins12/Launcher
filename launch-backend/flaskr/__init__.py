@@ -88,6 +88,7 @@ def _register_blueprints(app):
     """Register all route blueprints."""
     from flaskr.routes import auth_bp, student_bp, admin_bp, profile_bp, health_bp
     from flaskr.routes.notification import notification_bp
+    from flaskr.routes.dashboard import dashboard_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(student_bp)
@@ -95,3 +96,4 @@ def _register_blueprints(app):
     app.register_blueprint(profile_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(notification_bp)
+    app.register_blueprint(dashboard_bp)
