@@ -5,8 +5,23 @@ import CertificateList from './CertificateList';
 
 const { Option } = Select;
 
-const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileList }) => {
+const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileList, initialValues }) => {
   const [form] = Form.useForm();
+
+  React.useEffect(() => {
+    if (initialValues) {
+      form.setFieldsValue({
+        title: initialValues.title,
+        type: initialValues.type,
+        hours: initialValues.hours,
+      });
+      if (initialValues.certificate) {
+        setFileList(initialValues.certificate);
+      }
+    } else {
+      form.resetFields();
+    }
+  }, [initialValues]);
 
   const handleUploadChange = ({ fileList: newFileList }) => {
     setFileList([...newFileList]);

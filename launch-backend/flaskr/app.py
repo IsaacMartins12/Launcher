@@ -202,6 +202,48 @@ def inst_put():
     return jsonify({"status": "Atualizado"}), 200
 
 
+# ==================== PERFIL ====================
+
+@app.route('/perfil', methods=['GET'])
+@jwt_required()
+def perfil_get():
+    username = get_jwt_identity()
+    user = Users.query.filter_by(username=username).first()
+
+    if not user:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+
+    return jsonify({
+        "id": user.id,
+        "name": user.name,
+        "turma": user.turma,
+        "username": user.username,
+        "is_admin": bool(user.is_admin)
+    }), 200
+
+
+@app.route('/perfil', methods=['PUT'])
+@jwt_required()
+def perfil_put():
+    username = get_jwt_identity()
+    user = Users.query.filter_by(username=username).first()
+
+    if not user:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+
+    if not request.is_json:
+        return jsonify({"error": "JSON esperado"}), 400
+
+    data = request.get_json()
+    if data.get('name'):
+        user.name = data['name']
+    if data.get('turma'):
+        user.turma = data['turma']
+
+    db.session.commit()
+    return jsonify({"mensagem": "Perfil atualizado com sucesso!"}), 200
+
+
 if __name__ == '__main__':
     db.create_all()
     app.run(debug=True, port=2500)
