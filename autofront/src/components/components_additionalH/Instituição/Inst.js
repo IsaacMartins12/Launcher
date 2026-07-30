@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Spin, Layout, Space, Tag, Input, Modal, Button, message } from 'antd';
+import { Table, Spin, Layout, Space, Tag, Input, Modal, Button, message, Radio } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import CustomHeader from '../Header_additionalH';
 
@@ -12,6 +12,7 @@ const Inst = () => {
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [approvalAction, setApprovalAction] = useState(true);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Todos');
 
   useEffect(() => {
     fetchData();
@@ -93,6 +94,10 @@ const Inst = () => {
 
   const pendingCount = data.filter(item => item.status === 'Em Análise').length;
 
+  const filteredData = statusFilter === 'Todos'
+    ? data
+    : data.filter(item => item.status === statusFilter);
+
   const columns = [
     {
       title: 'Aluno',
@@ -171,16 +176,25 @@ const Inst = () => {
         <div style={{ color: '#0f4abe', marginBottom: '8px' }}>
           <h2 style={{ margin: 0 }}>Solicitações de Horas Complementares</h2>
         </div>
-        <div style={{ marginBottom: '12px' }}>
-          <Tag color="blue" style={{ fontSize: '14px', padding: '4px 12px' }}>
-            {pendingCount} pendente{pendingCount !== 1 ? 's' : ''}
-          </Tag>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <Radio.Group
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            optionType="button"
+            buttonStyle="solid"
+            size="small"
+          >
+            <Radio.Button value="Todos">Todos ({data.length})</Radio.Button>
+            <Radio.Button value="Em Análise">Pendentes ({data.filter(i => i.status === 'Em Análise').length})</Radio.Button>
+            <Radio.Button value="Aprovado">Aprovados ({data.filter(i => i.status === 'Aprovado').length})</Radio.Button>
+            <Radio.Button value="Rejeitado">Rejeitados ({data.filter(i => i.status === 'Rejeitado').length})</Radio.Button>
+          </Radio.Group>
         </div>
         <div style={{ borderBottom: '2px solid #e8e8e8', marginBottom: '12px' }}></div>
 
         <Spin spinning={loading}>
           <Table
-            dataSource={data}
+            dataSource={filteredData}
             columns={columns}
             pagination={{ pageSize: 10 }}
             scroll={{ x: 700 }}

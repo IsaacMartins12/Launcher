@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Button, Space, Table, Tag, Modal, message } from 'antd';
+import { Layout, Button, Space, Table, Tag, Modal, message, Radio } from 'antd';
 import { PlusOutlined, SendOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import CustomHeader from '../Header_additionalH';
 import ActivityForm from './ActivityForm';
@@ -14,6 +14,7 @@ const Aluno = () => {
   const [submittedActivities, setSubmittedActivities] = useState([]);
   const [selectedButton, setSelectedButton] = useState('send');
   const [fileList, setFileList] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('Todos');
 
   // Buscar registros do backend ao carregar
   useEffect(() => {
@@ -265,7 +266,28 @@ const Aluno = () => {
         ) : (
           <>
             {selectedButton === 'status' ? (
-              <Table dataSource={submittedActivities} columns={submittedColumns} pagination={false} scroll={{ x: 600 }} />
+              <div>
+                <div style={{ marginBottom: '12px' }}>
+                  <Radio.Group
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    optionType="button"
+                    buttonStyle="solid"
+                    size="small"
+                  >
+                    <Radio.Button value="Todos">Todos</Radio.Button>
+                    <Radio.Button value="Em Análise">Pendentes</Radio.Button>
+                    <Radio.Button value="Aprovado">Aprovados</Radio.Button>
+                    <Radio.Button value="Rejeitado">Rejeitados</Radio.Button>
+                  </Radio.Group>
+                </div>
+                <Table
+                  dataSource={statusFilter === 'Todos' ? submittedActivities : submittedActivities.filter(i => i.status === statusFilter)}
+                  columns={submittedColumns}
+                  pagination={false}
+                  scroll={{ x: 600 }}
+                />
+              </div>
             ) : selectedButton === 'hours' ? (
               <>
                 <h2>Horas Complementares</h2>
