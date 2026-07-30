@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Spin, Layout, Space, Tag, Input, Modal, Button, message, Radio, Card, Row, Col, Menu, Statistic } from 'antd';
-import { CheckOutlined, CloseOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, TeamOutlined, DashboardOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { Table, Spin, Layout, Space, Tag, Input, Modal, Button, message, Radio, Card, Row, Col, Menu, Statistic, Tooltip } from 'antd';
+import { CheckOutlined, CloseOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, TeamOutlined, DashboardOutlined, UnorderedListOutlined, UndoOutlined } from '@ant-design/icons';
 
 const { Content, Sider } = Layout;
 
@@ -91,6 +91,31 @@ const Inst = () => {
     setSelectedActivity(null);
   };
 
+  const handleRevert = async (record) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch('http://localhost:2500/inst', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id_certificate: record.id, status: 'Em An\u00e1lise' }),
+      });
+      if (response.ok) {
+        const updatedData = data.map((item) =>
+          item.id === record.id ? { ...item, status: 'Em Análise', rejection_reason: null } : item
+        );
+        setData(updatedData);
+        message.success('Status revertido para análise!');
+      } else {
+        message.error('Erro ao reverter status.');
+      }
+    } catch (error) {
+      message.error('Erro de conexão.');
+    }
+  };
+
   const pendingCount = data.filter(item => item.status === 'Em Análise').length;
   const approvedCount = data.filter(item => item.status === 'Aprovado').length;
   const rejectedCount = data.filter(item => item.status === 'Rejeitado').length;
@@ -103,8 +128,9 @@ const Inst = () => {
   const columns = [
     { title: 'Aluno', dataIndex: 'aluno', key: 'aluno' },
     { title: 'Título', dataIndex: 'title', key: 'title' },
-    { title: 'Tipo', dataIndex: 'type', key: 'type' },
+    { title: 'Categoria', dataIndex: 'category', key: 'category', width: 120 },
     { title: 'Horas', dataIndex: 'hours', key: 'hours', width: 70 },
+    { title: 'Horas Pond.', dataIndex: 'weighted_hours', key: 'weighted_hours', width: 100, render: (val) => val ? `${val}h` : '-' },
     { title: 'Certificado', dataIndex: 'certificate', key: 'certificate', ellipsis: true },
     {
       title: 'Status',
@@ -119,31 +145,37 @@ const Inst = () => {
     {
       title: 'Ação',
       key: 'action',
-      width: 200,
+      width: 250,
       render: (_, record) => {
-        if (record.status !== 'Em Análise') {
-          return <Tag>{record.status}</Tag>;
+        if (record.status === 'Em Análise') {
+          return (
+            <Space size="small" wrap>
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckOutlined />}
+                onClick={() => handleApprove(record)}
+                style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+              >
+                Aprovar
+              </Button>
+              <Button
+                danger
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={() => handleReject(record)}
+              >
+                Rejeitar
+              </Button>
+            </Space>
+          );
         }
         return (
-          <Space size="small" wrap>
-            <Button
-              type="primary"
-              size="small"
-              icon={<CheckOutlined />}
-              onClick={() => handleApprove(record)}
-              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-            >
-              Aprovar
+          <Tooltip title="Reverter para Em Análise">
+            <Button size="small" icon={<UndoOutlined />} onClick={() => handleRevert(record)}>
+              Reverter
             </Button>
-            <Button
-              danger
-              size="small"
-              icon={<CloseOutlined />}
-              onClick={() => handleReject(record)}
-            >
-              Rejeitar
-            </Button>
-          </Space>
+          </Tooltip>
         );
       },
     },

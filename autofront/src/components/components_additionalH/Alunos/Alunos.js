@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Button, Space, Table, Tag, Modal, message, Radio, Card, Row, Col, Menu, Statistic, Avatar, Dropdown, Form, Input, Descriptions } from 'antd';
-import { PlusOutlined, SendOutlined, EditOutlined, DeleteOutlined, CloudUploadOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, HistoryOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons';
+import { Layout, Button, Space, Table, Tag, Modal, message, Radio, Card, Row, Col, Menu, Statistic, Avatar, Dropdown, Form, Input, Descriptions, Tooltip } from 'antd';
+import { PlusOutlined, SendOutlined, EditOutlined, DeleteOutlined, CloudUploadOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, HistoryOutlined, UserOutlined, LogoutOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ActivityForm from './ActivityForm';
 import CertificateList from './CertificateList';
-import moment from 'moment';
 
 const { Content, Sider, Header } = Layout;
 
@@ -12,7 +11,6 @@ const Aluno = () => {
   const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
   const [submittedActivities, setSubmittedActivities] = useState([]);
   const [selectedButton, setSelectedButton] = useState('send');
@@ -23,6 +21,7 @@ const Aluno = () => {
   const [profile, setProfile] = useState(null);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [profileForm] = Form.useForm();
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -44,6 +43,13 @@ const Aluno = () => {
         .then(res => res.json())
         .then(data => { if (data.name) setProfile(data); })
         .catch(err => console.error('Erro ao buscar perfil:', err));
+
+      fetch('http://localhost:2500/categories', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => { if (Array.isArray(data)) setCategories(data); })
+        .catch(err => console.error('Erro ao buscar categorias:', err));
     }
   }, []);
 
@@ -79,8 +85,7 @@ const Aluno = () => {
         type: activity.type,
         hours: activity.hours,
         certificate: activity.certificate.map((file) => file.name),
-        status: 'Em Análise',
-        submissionDate: moment().format('DD/MM/YYYY'),
+        category_id: activity.category_id || null,
       }));
 
       const response = await fetch('http://localhost:2500/files', {
@@ -90,12 +95,19 @@ const Aluno = () => {
       });
 
       if (response.ok) {
-        setSubmittedActivities([...submittedActivities, ...submitted]);
+        // Refresh list from server to get accurate data
+        const refreshRes = await fetch('http://localhost:2500/aluno', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const refreshData = await refreshRes.json();
+        const items = Array.isArray(refreshData) ? refreshData : (refreshData.data || []);
+        setSubmittedActivities(items.map(item => ({ ...item, submissionDate: item.created_at })));
         setActivities([]);
         setSelectedButton('status');
         message.success('Atividades enviadas com sucesso!');
       } else {
-        message.error('Erro ao enviar atividades.');
+        const err = await response.json();
+        message.error(err.error || 'Erro ao enviar atividades.');
       }
     } catch (error) {
       message.error('Erro de conexão com o servidor.');
@@ -134,6 +146,28 @@ const Aluno = () => {
     navigate('/');
   };
 
+  const handleResubmit = async (registro) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(`http://localhost:2500/aluno/${registro.id}/resubmit`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const updated = submittedActivities.map(item =>
+          item.id === registro.id ? { ...item, status: 'Em Análise', rejection_reason: null } : item
+        );
+        setSubmittedActivities(updated);
+        message.success('Reenviado para análise!');
+      } else {
+        const err = await response.json();
+        message.error(err.error || 'Erro ao reenviar.');
+      }
+    } catch (error) {
+      message.error('Erro de conexão.');
+    }
+  };
+
   const handleUpdateProfile = async (values) => {
     const token = localStorage.getItem('token');
     try {
@@ -156,13 +190,13 @@ const Aluno = () => {
 
   // Estatísticas
   const totalHours = submittedActivities.reduce((acc, item) => acc + (item.hours || 0), 0);
-  const approvedHours = submittedActivities.filter(i => i.status === 'Aprovado').reduce((acc, item) => acc + (item.hours || 0), 0);
+  const approvedHours = submittedActivities.filter(i => i.status === 'Aprovado').reduce((acc, item) => acc + (item.weighted_hours || item.hours || 0), 0);
   const pendingCount = submittedActivities.filter(i => i.status === 'Em Análise').length;
   const rejectedCount = submittedActivities.filter(i => i.status === 'Rejeitado').length;
 
   const columns = [
     { title: 'Título', dataIndex: 'title', key: 'title' },
-    { title: 'Tipo', dataIndex: 'type', key: 'type' },
+    { title: 'Categoria', dataIndex: 'type', key: 'type' },
     { title: 'Horas', dataIndex: 'hours', key: 'hours', width: 70 },
     {
       title: 'Comprovante',
@@ -191,12 +225,29 @@ const Aluno = () => {
 
   const submittedColumns = [
     { title: 'Título', dataIndex: 'title', key: 'title' },
-    { title: 'Tipo', dataIndex: 'type', key: 'type' },
-    { title: 'Horas', dataIndex: 'hours', key: 'hours', width: 80 },
+    { title: 'Categoria', dataIndex: 'category', key: 'category', width: 120 },
+    { title: 'Horas', dataIndex: 'hours', key: 'hours', width: 70 },
+    { title: 'Horas Pond.', dataIndex: 'weighted_hours', key: 'weighted_hours', width: 100, render: (val) => val ? `${val}h` : '-' },
     { title: 'Comprovante', dataIndex: 'certificate', key: 'certificate', ellipsis: true, render: (text) => <a href={text} target="_blank" rel="noopener noreferrer">{text}</a> },
     { title: 'Status', key: 'status', width: 120, render: (text, record) => <Tag color={record.status === 'Aprovado' ? 'green' : record.status === 'Rejeitado' ? 'red' : 'blue'}>{record.status}</Tag> },
     { title: 'Justificativa', dataIndex: 'rejection_reason', key: 'rejection_reason', render: (text) => text ? <Tag color="orange">{text}</Tag> : '-' },
-    { title: 'Data', dataIndex: 'submissionDate', key: 'submissionDate', width: 110, render: (text) => { if (!text) return '-'; const d = new Date(text); return isNaN(d.getTime()) ? text : d.toLocaleDateString('pt-BR'); } },
+    {
+      title: 'Ação',
+      key: 'action',
+      width: 110,
+      render: (_, record) => {
+        if (record.status === 'Rejeitado') {
+          return (
+            <Tooltip title="Reenviar para análise">
+              <Button size="small" icon={<ReloadOutlined />} onClick={() => handleResubmit(record)} type="primary">
+                Reenviar
+              </Button>
+            </Tooltip>
+          );
+        }
+        return '-';
+      },
+    },
   ];
 
   const menuItems = [
@@ -325,6 +376,7 @@ const Aluno = () => {
           fileList={fileList}
           setFileList={setFileList}
           initialValues={editingIndex !== null ? activities[editingIndex] : null}
+          categories={categories}
         />
       </Modal>
 

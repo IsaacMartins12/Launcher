@@ -1,18 +1,18 @@
 import React from 'react';
-import { Form, Button, Upload, Input, Select } from 'antd';
+import { Form, Button, Upload, Input, Select, InputNumber } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import CertificateList from './CertificateList';
 
 const { Option } = Select;
 
-const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileList, initialValues }) => {
+const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileList, initialValues, categories = [] }) => {
   const [form] = Form.useForm();
 
   React.useEffect(() => {
     if (initialValues) {
       form.setFieldsValue({
         title: initialValues.title,
-        type: initialValues.type,
+        category_id: initialValues.category_id || undefined,
         hours: initialValues.hours,
       });
       if (initialValues.certificate) {
@@ -32,44 +32,26 @@ const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileLi
     setFileList(newFileList);
   };
 
- {/*   const handleSubmit = () => {
-    form
-      .validateFields(['title', 'type', 'hours'])
-      .then(async (values) => {
-        // Enviar a imagem para o servidor
-        const formData = new FormData();
-        formData.append('image', fileList[0].originFileObj);
-
-        const response = await fetch('http://localhost:2500/files', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const result = await response.json();
-
-        // Adicionar dados e URL da imagem ao objeto values
-        onFinish({ ...values, certificate: fileList, imageUrl: result.imageUrl });
-
-        form.resetFields();
-        setFileList([]); // Limpar a lista de arquivos após o envio do formulário
-      })
-      .catch((errorInfo) => {
-        console.log('Failed:', errorInfo);
-      });
-  }; */}
-//
   const handleSubmit = () => {
     form
-      .validateFields(['title', 'type', 'hours'])
+      .validateFields(['title', 'category_id', 'hours'])
       .then((values) => {
-        onFinish({ ...values, certificate: fileList });
+        const selectedCategory = categories.find(c => c.id === values.category_id);
+        onFinish({
+          ...values,
+          type: selectedCategory ? selectedCategory.name : 'Outro',
+          certificate: fileList,
+        });
         form.resetFields();
-        setFileList([]); // Limpa a lista de arquivos após o envio do formulário
+        setFileList([]);
       })
       .catch((errorInfo) => {
         console.log('Failed:', errorInfo);
       });
   };
+
+  const selectedCategoryId = Form.useWatch('category_id', form);
+  const selectedCategory = categories.find(c => c.id === selectedCategoryId);
 
   return (
     <div>
@@ -81,27 +63,34 @@ const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileLi
         <Form.Item
           label="Título"
           name="title"
-          rules={[{ required: true, message: 'Please enter the title!' }]}
+          rules={[{ required: true, message: 'Informe o título da atividade' }]}
         >
-          <Input />
+          <Input placeholder="Ex: Curso de Python Avançado" />
         </Form.Item>
         <Form.Item
-          label="Tipo"
-          name="type"
-          rules={[{ required: true, message: 'Please select the type!' }]}
+          label="Categoria"
+          name="category_id"
+          rules={[{ required: true, message: 'Selecione a categoria' }]}
         >
-          <Select>
-            <Option value="curso">Curso</Option>
-            <Option value="workshop">Workshop</Option>
-            <Option value="outro">Other</Option>
+          <Select placeholder="Selecione a categoria">
+            {categories.map(cat => (
+              <Option key={cat.id} value={cat.id}>
+                {cat.name} (máx. {cat.max_hours}h, peso {cat.weight}x)
+              </Option>
+            ))}
           </Select>
         </Form.Item>
+        {selectedCategory && (
+          <div style={{ marginTop: '-12px', marginBottom: '12px', fontSize: '12px', color: '#888' }}>
+            {selectedCategory.description} — Limite: {selectedCategory.max_hours}h
+          </div>
+        )}
         <Form.Item
           label="Horas"
           name="hours"
-          rules={[{ required: true, message: 'Please enter the hours!' }]}
+          rules={[{ required: true, message: 'Informe a carga horária' }]}
         >
-          <Input type="number" />
+          <InputNumber min={1} max={500} style={{ width: '100%' }} placeholder="Carga horária" />
         </Form.Item>
 
         <Form.Item
@@ -109,11 +98,12 @@ const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileLi
           name="certificate"
           valuePropName="fileList"
           getValueFromEvent={handleUploadChange}
+          rules={[{ required: true, message: 'Anexe o comprovante' }]}
         >
           <Upload
             name="logo"
             listType="picture"
-            accept=".pdf, .jpg, .jpeg"
+            accept=".pdf, .jpg, .jpeg, .png"
             fileList={fileList}
             beforeUpload={() => false}
             onRemove={handleRemove}
@@ -122,7 +112,6 @@ const ActivityForm = ({ onFinish, activities, setActivities, fileList, setFileLi
             <Button icon={<UploadOutlined />}>Fazer Upload</Button>
           </Upload>
         </Form.Item>
-        {/*CertificateList mostra a lista de arquivos */}
         <CertificateList fileList={fileList} onRemove={handleRemove} />
         <Form.Item>
           <Button type="primary" htmlType="submit">
