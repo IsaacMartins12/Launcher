@@ -7,7 +7,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 
 from flaskr.extensions import db
-from flaskr.models import User, Registro, Category
+from flaskr.models import User, Registro, Category, Notification
 from flaskr.schemas import StatusUpdateSchema, CategorySchema
 
 admin_bp = Blueprint("admin", __name__)
@@ -75,6 +75,28 @@ def update_submission_status():
     registro.rejection_reason = data.get("rejection_reason") if new_status == "Rejeitado" else None
     registro.updated_at = datetime.now(timezone.utc)
 
+    # Create notification for the student
+    notif_messages = {
+        "Aprovado": f"Sua atividade '{registro.title}' foi aprovada!",
+        "Rejeitado": f"Sua atividade '{registro.title}' foi rejeitada.",
+        "Em Análise": f"Sua atividade '{registro.title}' voltou para análise.",
+    }
+    notif_types = {
+        "Aprovado": "success",
+        "Rejeitado": "error",
+        "Em Análise": "info",
+    }
+    notif_msg = notif_messages.get(new_status, f"Status de '{registro.title}' alterado para {new_status}")
+    if new_status == "Rejeitado" and registro.rejection_reason:
+        notif_msg += f" Motivo: {registro.rejection_reason}"
+
+    notification = Notification(
+        user_id=registro.user_id,
+        message=notif_msg,
+        type=notif_types.get(new_status, "info"),
+        registro_id=registro.id,
+    )
+    db.session.add(notification)
     db.session.commit()
 
     admin_username = get_jwt_identity()

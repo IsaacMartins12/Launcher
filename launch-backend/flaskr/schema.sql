@@ -58,3 +58,16 @@ CREATE TABLE `registros` (
   INDEX `idx_user_status` (`user_id`, `status`),
   INDEX `idx_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `notifications` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `user_id` INT NOT NULL,
+  `message` VARCHAR(300) NOT NULL,
+  `type` VARCHAR(30) NOT NULL DEFAULT 'info',
+  `is_read` BOOLEAN NOT NULL DEFAULT FALSE,
+  `registro_id` INT,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  INDEX `idx_user_read` (`user_id`, `is_read`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

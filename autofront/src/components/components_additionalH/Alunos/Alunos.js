@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Button, Space, Table, Tag, Modal, message, Radio, Card, Row, Col, Menu, Statistic, Avatar, Dropdown, Form, Input, Descriptions, Tooltip } from 'antd';
-import { PlusOutlined, SendOutlined, EditOutlined, DeleteOutlined, CloudUploadOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, HistoryOutlined, UserOutlined, LogoutOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Layout, Button, Space, Table, Tag, Modal, message, Radio, Card, Row, Col, Menu, Statistic, Avatar, Dropdown, Form, Input, Descriptions, Tooltip, Badge, Popover, List } from 'antd';
+import { PlusOutlined, SendOutlined, EditOutlined, DeleteOutlined, CloudUploadOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, HistoryOutlined, UserOutlined, LogoutOutlined, ReloadOutlined, BellOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ActivityForm from './ActivityForm';
 import CertificateList from './CertificateList';
@@ -22,6 +22,8 @@ const Aluno = () => {
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [profileForm] = Form.useForm();
   const [categories, setCategories] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -50,8 +52,33 @@ const Aluno = () => {
         .then(res => res.json())
         .then(data => { if (Array.isArray(data)) setCategories(data); })
         .catch(err => console.error('Erro ao buscar categorias:', err));
+
+      fetchNotifications(token);
     }
   }, []);
+
+  const fetchNotifications = (token) => {
+    if (!token) token = localStorage.getItem('token');
+    fetch('http://localhost:2500/notifications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.notifications) setNotifications(data.notifications);
+        if (data.unread_count !== undefined) setUnreadCount(data.unread_count);
+      })
+      .catch(err => console.error('Erro ao buscar notificações:', err));
+  };
+
+  const handleMarkAllRead = async () => {
+    const token = localStorage.getItem('token');
+    await fetch('http://localhost:2500/notifications/read-all', {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    setUnreadCount(0);
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+  };
 
   const onFinishActivity = (values) => {
     if (editingIndex !== null) {
@@ -345,9 +372,49 @@ const Aluno = () => {
           <span style={{ fontWeight: 500, fontSize: '16px', color: '#333' }}>
             {profile ? `Olá, ${profile.name.split(' ')[0]}` : 'Carregando...'}
           </span>
-          <Dropdown menu={{ items: avatarMenuItems }} placement="bottomRight" trigger={['click']}>
-            <Avatar size={40} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff', cursor: 'pointer' }} />
-          </Dropdown>
+          <Space size="middle">
+            <Popover
+              title={
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Notificações</span>
+                  {unreadCount > 0 && (
+                    <Button type="link" size="small" onClick={handleMarkAllRead}>
+                      Marcar todas como lidas
+                    </Button>
+                  )}
+                </div>
+              }
+              trigger="click"
+              placement="bottomRight"
+              content={
+                <div style={{ width: 320, maxHeight: 400, overflow: 'auto' }}>
+                  {notifications.length === 0 ? (
+                    <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>Nenhuma notificação</p>
+                  ) : (
+                    <List
+                      dataSource={notifications.slice(0, 20)}
+                      renderItem={(item) => (
+                        <List.Item style={{ backgroundColor: item.is_read ? '#fff' : '#f6ffed', padding: '8px 12px' }}>
+                          <List.Item.Meta
+                            title={<span style={{ fontSize: '13px' }}>{item.message}</span>}
+                            description={<span style={{ fontSize: '11px', color: '#999' }}>{new Date(item.created_at).toLocaleString('pt-BR')}</span>}
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  )}
+                </div>
+              }
+              onOpenChange={(visible) => { if (visible) fetchNotifications(); }}
+            >
+              <Badge count={unreadCount} size="small">
+                <BellOutlined style={{ fontSize: '20px', cursor: 'pointer', color: '#555' }} />
+              </Badge>
+            </Popover>
+            <Dropdown menu={{ items: avatarMenuItems }} placement="bottomRight" trigger={['click']}>
+              <Avatar size={40} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff', cursor: 'pointer' }} />
+            </Dropdown>
+          </Space>
         </Header>
         <Content style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 64px)' }}>
           <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
