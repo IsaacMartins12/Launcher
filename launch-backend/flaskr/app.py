@@ -118,6 +118,7 @@ def aluno():
             "hours": r.hours,
             "certificate": r.certificate,
             "status": r.status,
+            "rejection_reason": r.rejection_reason,
             "created_at": str(r.created_at) if r.created_at else None
         })
 

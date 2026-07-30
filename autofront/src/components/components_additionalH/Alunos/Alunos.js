@@ -159,8 +159,9 @@ const Aluno = () => {
     
       {
         title: 'Justificativa',
-        dataIndex: 'rejectReason',
-        key: 'rejectReason',
+        dataIndex: 'rejection_reason',
+        key: 'rejection_reason',
+        render: (text) => text ? <Tag color="orange">{text}</Tag> : '-',
       },
     {
       title: 'Data de Envio',
