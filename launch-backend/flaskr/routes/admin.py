@@ -1,4 +1,4 @@
-"""Admin/Institution routes — review and approve/reject submissions."""
+"""Admin/Institution routes — review, approve/reject submissions, manage categories."""
 
 from datetime import datetime, timezone
 
@@ -7,12 +7,16 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 
 from flaskr.extensions import db
-from flaskr.models import User, Registro
-from flaskr.schemas import StatusUpdateSchema
+from flaskr.models import User, Registro, Category
+from flaskr.schemas import StatusUpdateSchema, CategorySchema
 
 admin_bp = Blueprint("admin", __name__)
 
 _status_schema = StatusUpdateSchema()
+_category_schema = CategorySchema()
+
+
+# ─── Submissions ────────────────────────────────────────────────────────────────
 
 
 @admin_bp.route("/inst", methods=["GET"])
@@ -48,7 +52,7 @@ def list_all_submissions():
 @admin_bp.route("/inst", methods=["PUT"])
 @jwt_required()
 def update_submission_status():
-    """Approve or reject a submission."""
+    """Approve, reject, or revert a submission status."""
     if not _is_admin():
         return jsonify({"error": "Acesso negado"}), 403
 
@@ -79,6 +83,110 @@ def update_submission_status():
     )
 
     return jsonify({"status": "Atualizado", "registro": registro.to_dict()}), 200
+
+
+# ─── Categories CRUD ────────────────────────────────────────────────────────────
+
+
+@admin_bp.route("/categories", methods=["GET"])
+@jwt_required()
+def list_categories():
+    """List all activity categories (available to all authenticated users)."""
+    categories = Category.query.order_by(Category.name).all()
+    return jsonify([c.to_dict() for c in categories]), 200
+
+
+@admin_bp.route("/categories", methods=["POST"])
+@jwt_required()
+def create_category():
+    """Create a new activity category (admin only)."""
+    if not _is_admin():
+        return jsonify({"error": "Acesso negado"}), 403
+
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 400
+
+    try:
+        data = _category_schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify({"error": "Dados inválidos", "detail": err.messages}), 400
+
+    # Check if name already exists
+    existing = Category.query.filter_by(name=data["name"]).first()
+    if existing:
+        return jsonify({"error": f"Categoria '{data['name']}' já existe"}), 409
+
+    category = Category(
+        name=data["name"],
+        max_hours=data["max_hours"],
+        weight=data.get("weight", 1.0),
+        description=data.get("description"),
+    )
+    db.session.add(category)
+    db.session.commit()
+
+    current_app.logger.info("Admin created category: %s", category.name)
+    return jsonify({"mensagem": "Categoria criada", "category": category.to_dict()}), 201
+
+
+@admin_bp.route("/categories/<int:category_id>", methods=["PUT"])
+@jwt_required()
+def update_category(category_id):
+    """Update an existing category (admin only)."""
+    if not _is_admin():
+        return jsonify({"error": "Acesso negado"}), 403
+
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 400
+
+    category = db.session.get(Category, category_id)
+    if not category:
+        return jsonify({"error": "Categoria não encontrada"}), 404
+
+    try:
+        data = _category_schema.load(request.get_json(), partial=True)
+    except ValidationError as err:
+        return jsonify({"error": "Dados inválidos", "detail": err.messages}), 400
+
+    if "name" in data:
+        category.name = data["name"]
+    if "max_hours" in data:
+        category.max_hours = data["max_hours"]
+    if "weight" in data:
+        category.weight = data["weight"]
+    if "description" in data:
+        category.description = data["description"]
+
+    db.session.commit()
+    return jsonify({"mensagem": "Categoria atualizada", "category": category.to_dict()}), 200
+
+
+@admin_bp.route("/categories/<int:category_id>", methods=["DELETE"])
+@jwt_required()
+def delete_category(category_id):
+    """Delete a category (admin only). Fails if registros are linked."""
+    if not _is_admin():
+        return jsonify({"error": "Acesso negado"}), 403
+
+    category = db.session.get(Category, category_id)
+    if not category:
+        return jsonify({"error": "Categoria não encontrada"}), 404
+
+    # Check if any registros use this category
+    linked_count = Registro.active().filter_by(category_id=category_id).count()
+    if linked_count > 0:
+        return jsonify({
+            "error": f"Não é possível excluir: {linked_count} registro(s) vinculado(s)"
+        }), 409
+
+    db.session.delete(category)
+    db.session.commit()
+
+    current_app.logger.info("Admin deleted category: %s", category.name)
+    return jsonify({"mensagem": "Categoria removida"}), 200
+
+
+# ─── Helpers ────────────────────────────────────────────────────────────────────
 
 
 def _is_admin():

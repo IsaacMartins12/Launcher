@@ -12,6 +12,7 @@ class Registro(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=True)
     title = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(30), nullable=False)
     hours = db.Column(db.Integer, nullable=False)
@@ -23,6 +24,7 @@ class Registro(db.Model):
     deleted_at = db.Column(db.DateTime, nullable=True)
 
     user = db.relationship("User", back_populates="registros")
+    category = db.relationship("Category", back_populates="registros")
 
     def __repr__(self):
         return f"<Registro {self.id} - {self.title}>"
@@ -31,6 +33,13 @@ class Registro(db.Model):
     def is_deleted(self):
         """Check if record was soft-deleted."""
         return self.deleted_at is not None
+
+    @property
+    def weighted_hours(self):
+        """Calculate hours with category weight applied."""
+        if self.category and self.category.weight:
+            return self.hours * self.category.weight
+        return float(self.hours)
 
     def soft_delete(self):
         """Mark record as deleted without removing from database."""
@@ -43,9 +52,12 @@ class Registro(db.Model):
             "title": self.title,
             "type": self.type,
             "hours": self.hours,
+            "weighted_hours": self.weighted_hours,
             "certificate": self.certificate,
             "status": self.status,
             "rejection_reason": self.rejection_reason,
+            "category_id": self.category_id,
+            "category": self.category.name if self.category else self.type,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
         if include_user:

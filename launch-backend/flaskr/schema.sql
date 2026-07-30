@@ -19,9 +19,29 @@ INSERT INTO users (name, turma, username, password, is_admin) VALUES
   ('Fulano de Tal Souza', '3AE', '170821', '1234', 0),
   ('FUCAPI', 'FUCAPI', '170820', '123', 1);
 
+CREATE TABLE `categories` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(50) NOT NULL UNIQUE,
+  `max_hours` INT NOT NULL,
+  `weight` FLOAT NOT NULL DEFAULT 1.0,
+  `description` VARCHAR(200),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Categorias padrão de exemplo
+INSERT INTO categories (name, max_hours, weight, description) VALUES
+  ('Curso', 80, 1.0, 'Cursos livres, online ou presenciais'),
+  ('Palestra', 40, 0.8, 'Participação como ouvinte em palestras'),
+  ('Workshop', 60, 1.0, 'Oficinas práticas e workshops'),
+  ('Evento', 40, 0.8, 'Participação em eventos acadêmicos'),
+  ('Monitoria', 100, 1.5, 'Atuação como monitor em disciplinas'),
+  ('Projeto de Extensão', 120, 1.5, 'Participação em projetos de extensão'),
+  ('Voluntariado', 60, 1.2, 'Atividades voluntárias comprovadas');
+
 CREATE TABLE `registros` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `user_id` INT NOT NULL,
+  `category_id` INT,
   `title` VARCHAR(100) NOT NULL,
   `type` VARCHAR(30) NOT NULL,
   `hours` INT NOT NULL,
@@ -33,6 +53,7 @@ CREATE TABLE `registros` (
   `deleted_at` DATETIME,
   PRIMARY KEY (`id`),
   FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON SET NULL,
   INDEX `idx_user_status` (`user_id`, `status`),
   INDEX `idx_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

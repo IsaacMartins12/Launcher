@@ -17,6 +17,7 @@ class SubmissionSchema(Schema):
     type = fields.String(required=True, validate=validate.Length(min=1, max=30))
     hours = fields.Integer(required=True, strict=True)
     certificate = fields.Raw(load_default="")
+    category_id = fields.Integer(load_default=None)
 
     @validates("hours")
     def validate_hours(self, value):
@@ -27,12 +28,12 @@ class SubmissionSchema(Schema):
 
 
 class StatusUpdateSchema(Schema):
-    """Validates status update (approve/reject) payload."""
+    """Validates status update (approve/reject/revert) payload."""
 
     id_certificate = fields.Integer(required=True)
     status = fields.String(
         required=True,
-        validate=validate.OneOf(["Aprovado", "Rejeitado"]),
+        validate=validate.OneOf(["Aprovado", "Rejeitado", "Em Análise"]),
     )
     rejection_reason = fields.String(
         load_default=None,
@@ -45,3 +46,29 @@ class ProfileUpdateSchema(Schema):
 
     name = fields.String(validate=validate.Length(min=1, max=80))
     turma = fields.String(validate=validate.Length(min=1, max=80))
+
+
+class CategorySchema(Schema):
+    """Validates category creation/update payload."""
+
+    name = fields.String(required=True, validate=validate.Length(min=1, max=50))
+    max_hours = fields.Integer(required=True)
+    weight = fields.Float(load_default=1.0)
+    description = fields.String(
+        load_default=None,
+        validate=validate.Length(max=200),
+    )
+
+    @validates("max_hours")
+    def validate_max_hours(self, value):
+        if value <= 0:
+            raise ValidationError("Limite de horas deve ser positivo.")
+        if value > 500:
+            raise ValidationError("Limite não pode exceder 500.")
+
+    @validates("weight")
+    def validate_weight(self, value):
+        if value <= 0:
+            raise ValidationError("Peso deve ser positivo.")
+        if value > 5:
+            raise ValidationError("Peso não pode exceder 5.")
