@@ -32,38 +32,66 @@ docker compose up --build -d
 ## Estrutura do projeto
 
 ```
-├── autofront/           # Frontend React
+├── autofront/                  # Frontend React
 │   ├── src/
-│   │   ├── components/  # Componentes (Login, Aluno, Instituição)
+│   │   ├── components/         # Componentes (Login, Aluno, Instituição)
 │   │   └── components_css/
 │   ├── Dockerfile
 │   └── package.json
-├── launch-backend/      # Backend Flask
+├── launch-backend/             # Backend Flask
 │   ├── flaskr/
-│   │   ├── app.py      # Rotas da API
-│   │   └── schema.sql  # Schema do banco
+│   │   ├── __init__.py         # Application factory (create_app)
+│   │   ├── app.py              # Entrypoint (Flask CLI)
+│   │   ├── config.py           # Configurações (Dev/Prod)
+│   │   ├── extensions.py       # SQLAlchemy, JWT, CORS
+│   │   ├── models/
+│   │   │   ├── user.py         # Model User
+│   │   │   └── registro.py     # Model Registro
+│   │   ├── routes/
+│   │   │   ├── auth.py         # Blueprint: login/logout
+│   │   │   ├── student.py      # Blueprint: área do aluno
+│   │   │   ├── admin.py        # Blueprint: área do diretor
+│   │   │   └── profile.py      # Blueprint: perfil do usuário
+│   │   └── schema.sql          # Seed de dados (docker-entrypoint)
 │   ├── Dockerfile
 │   └── requirements.txt
-└── docker-compose.yml   # Orquestração dos 3 serviços
+└── docker-compose.yml          # Orquestração dos 3 serviços
 ```
+
+## Arquitetura do Backend
+
+O backend segue o **Application Factory Pattern** com **Blueprints** para separação de responsabilidades:
+
+- **Factory** (`__init__.py`): Cria e configura a app, inicializa extensões e registra blueprints
+- **Config** (`config.py`): Classes de configuração por ambiente (Development/Production)
+- **Extensions** (`extensions.py`): Instâncias das extensões Flask desacopladas da app
+- **Models**: SQLAlchemy models com métodos `to_dict()` para serialização
+- **Routes**: Blueprints isolados por domínio (auth, student, admin, profile)
 
 ## API
 
-| Método | Rota     | Descrição                        | Auth  |
-|--------|----------|----------------------------------|-------|
-| POST   | /login   | Autenticação (retorna JWT)       | Não   |
-| POST   | /logout  | Logout                           | Não   |
-| GET    | /aluno   | Listar registros do aluno logado | JWT   |
-| POST   | /files   | Enviar atividades complementares | JWT   |
-| GET    | /inst    | Listar todas as submissões       | JWT   |
-| PUT    | /inst    | Aprovar/Rejeitar submissão       | JWT   |
+| Método | Rota     | Descrição                        | Auth  | Blueprint |
+|--------|----------|----------------------------------|-------|-----------|
+| POST   | /login   | Autenticação (retorna JWT)       | Não   | auth      |
+| POST   | /logout  | Logout                           | Não   | auth      |
+| GET    | /aluno   | Listar registros do aluno logado | JWT   | student   |
+| POST   | /files   | Enviar atividades complementares | JWT   | student   |
+| GET    | /inst    | Listar todas as submissões       | JWT   | admin     |
+| PUT    | /inst    | Aprovar/Rejeitar submissão       | JWT   | admin     |
+| GET    | /perfil  | Dados do perfil do usuário       | JWT   | profile   |
+| PUT    | /perfil  | Atualizar nome/turma             | JWT   | profile   |
 
 ## Status do projeto
 
 - [x] Login/autenticação JWT
-- [x] Área do aluno (enviar certificados, ver status)
+- [x] Área do aluno (enviar certificados, ver status, editar/excluir)
+- [x] Área do diretor (aprovar/rejeitar com motivo)
+- [x] Perfil do usuário (avatar, edição de dados)
 - [x] Docker Compose (MySQL + Backend + Frontend)
 - [x] Layout responsivo (mobile + desktop)
-- [x] Área do diretor (aprovar/rejeitar)
+- [x] Backend com Blueprints e Application Factory Pattern
+- [x] Filtros por status (Pendentes/Aprovados/Rejeitados)
+- [x] Dashboard com cards de resumo
 - [ ] Upload real de arquivos (PDF/imagem)
 - [ ] Hash de senhas (atualmente plaintext)
+- [ ] Testes automatizados

@@ -197,7 +197,7 @@ const Aluno = () => {
     { title: 'Comprovante', dataIndex: 'certificate', key: 'certificate', ellipsis: true, render: (text) => <a href={text} target="_blank" rel="noopener noreferrer">{text}</a> },
     { title: 'Status', key: 'status', width: 120, render: (text, record) => <Tag color={record.status === 'Aprovado' ? 'green' : record.status === 'Rejeitado' ? 'red' : 'blue'}>{record.status}</Tag> },
     { title: 'Justificativa', dataIndex: 'rejection_reason', key: 'rejection_reason', render: (text) => text ? <Tag color="orange">{text}</Tag> : '-' },
-    { title: 'Data', dataIndex: 'submissionDate', key: 'submissionDate', width: 110, render: (text) => text ? new Date(text).toLocaleDateString('pt-BR') : '-' },
+    { title: 'Data', dataIndex: 'submissionDate', key: 'submissionDate', width: 110, render: (text) => { if (!text) return '-'; const d = new Date(text); return isNaN(d.getTime()) ? text : d.toLocaleDateString('pt-BR'); } },
   ];
 
   const menuItems = [
