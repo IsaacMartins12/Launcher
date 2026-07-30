@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Spin, Layout, Space, Tag, Input, InputNumber, Modal, Button, message, Radio, Card, Row, Col, Menu, Statistic, Tooltip, Form } from 'antd';
-import { CheckOutlined, CloseOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, TeamOutlined, DashboardOutlined, UnorderedListOutlined, UndoOutlined, AppstoreOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Spin, Layout, Space, Tag, Input, InputNumber, Modal, Button, message, Radio, Card, Row, Col, Menu, Statistic, Tooltip, Form, Badge, Popover, List } from 'antd';
+import { CheckOutlined, CloseOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, TeamOutlined, DashboardOutlined, UnorderedListOutlined, UndoOutlined, AppstoreOutlined, PlusOutlined, EditOutlined, DeleteOutlined, BellOutlined } from '@ant-design/icons';
 
-const { Content, Sider } = Layout;
+const { Content, Sider, Header } = Layout;
 
 const Inst = () => {
   const [data, setData] = useState([]);
@@ -18,11 +18,37 @@ const Inst = () => {
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [categoryForm] = Form.useForm();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     fetchData();
     fetchCategories();
+    fetchNotifications();
   }, []);
+
+  const fetchNotifications = () => {
+    const token = localStorage.getItem('token');
+    fetch('http://localhost:2500/notifications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.notifications) setNotifications(data.notifications);
+        if (data.unread_count !== undefined) setUnreadCount(data.unread_count);
+      })
+      .catch(err => console.error('Erro ao buscar notificações:', err));
+  };
+
+  const handleMarkAllRead = async () => {
+    const token = localStorage.getItem('token');
+    await fetch('http://localhost:2500/notifications/read-all', {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    setUnreadCount(0);
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+  };
 
   const fetchData = async () => {
     try {
@@ -428,7 +454,48 @@ const Inst = () => {
         />
       </Sider>
       <Layout>
-        <Content style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+        <Header style={{ backgroundColor: '#fff', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
+          <span style={{ fontWeight: 500, fontSize: '16px', color: '#333' }}>Painel Administrativo</span>
+          <Popover
+            title={
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Notificações</span>
+                {unreadCount > 0 && (
+                  <Button type="link" size="small" onClick={handleMarkAllRead}>
+                    Marcar todas como lidas
+                  </Button>
+                )}
+              </div>
+            }
+            trigger="click"
+            placement="bottomRight"
+            content={
+              <div style={{ width: 320, maxHeight: 400, overflow: 'auto' }}>
+                {notifications.length === 0 ? (
+                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>Nenhuma notificação</p>
+                ) : (
+                  <List
+                    dataSource={notifications.slice(0, 20)}
+                    renderItem={(item) => (
+                      <List.Item style={{ backgroundColor: item.is_read ? '#fff' : '#e6f7ff', padding: '8px 12px' }}>
+                        <List.Item.Meta
+                          title={<span style={{ fontSize: '13px' }}>{item.message}</span>}
+                          description={<span style={{ fontSize: '11px', color: '#999' }}>{new Date(item.created_at).toLocaleString('pt-BR')}</span>}
+                        />
+                      </List.Item>
+                    )}
+                  />
+                )}
+              </div>
+            }
+            onOpenChange={(visible) => { if (visible) fetchNotifications(); }}
+          >
+            <Badge count={unreadCount} size="small">
+              <BellOutlined style={{ fontSize: '20px', cursor: 'pointer', color: '#555' }} />
+            </Badge>
+          </Popover>
+        </Header>
+        <Content style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 64px)' }}>
           {/* Cards resumo no topo */}
           <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
             <Col xs={12} sm={6}>
