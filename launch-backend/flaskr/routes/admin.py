@@ -24,7 +24,12 @@ _category_schema = CategorySchema()
 def list_all_submissions():
     """List all active submissions (for admin review).
 
-    Supports pagination via query params: ?page=1&per_page=20
+    Supports pagination and filtering via query params:
+    - ?page=1&per_page=20
+    - ?search=fulano (searches name, username, title)
+    - ?status=Aprovado
+    - ?category=Curso
+    - ?turma=3BE
     """
     if not _is_admin():
         return jsonify({"error": "Acesso negado"}), 403
@@ -35,7 +40,36 @@ def list_all_submissions():
         current_app.config["MAX_PAGE_SIZE"],
     )
 
-    query = Registro.active().order_by(Registro.created_at.desc())
+    query = Registro.active().join(User).order_by(Registro.created_at.desc())
+
+    # Filter by status
+    status = request.args.get("status")
+    if status and status in ("Em Análise", "Aprovado", "Rejeitado"):
+        query = query.filter(Registro.status == status)
+
+    # Filter by category
+    category_filter = request.args.get("category")
+    if category_filter:
+        query = query.join(Category).filter(Category.name == category_filter)
+
+    # Filter by turma
+    turma = request.args.get("turma")
+    if turma:
+        query = query.filter(User.turma == turma)
+
+    # Search (name, username, title, or category)
+    search = request.args.get("search")
+    if search:
+        like = f"%{search}%"
+        query = query.outerjoin(Category, Registro.category_id == Category.id).filter(
+            db.or_(
+                User.name.ilike(like),
+                User.username.ilike(like),
+                Registro.title.ilike(like),
+                Category.name.ilike(like),
+            )
+        )
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
     return jsonify({
