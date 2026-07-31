@@ -18,7 +18,7 @@ CREATE TABLE `users` (
 INSERT INTO users (name, turma, username, password, is_admin) VALUES
   ('Fulano de Tal Silva', '3BE', '170819', '1234', 0),
   ('Fulano de Tal Souza', '3AE', '170821', '1234', 0),
-  ('FUCAPI', 'FUCAPI', '170820', '123', 1);
+  ('Prof. Carlos Diretor', 'Coordenação', '170820', '123', 1);
 
 CREATE TABLE `categories` (
   `id` INT NOT NULL AUTO_INCREMENT,
