@@ -1,97 +1,175 @@
-# Lançador de Horas Complementares
+# 📚 Complementary Hours Management System
 
-Sistema web para upload e gerenciamento de horas complementares. Alunos enviam certificados e a instituição aprova ou rejeita as solicitações.
+Full-stack system for managing academic extracurricular activities. Students submit certificates, directors approve/reject them, and the system automatically controls limits, weights, and progress tracking.
 
-## Stack
+## 🛠 Tech Stack
 
-- **Frontend**: React 18, Ant Design, React Router
-- **Backend**: Flask 3, Flask-JWT-Extended, SQLAlchemy
-- **Banco de dados**: MySQL 8
-- **Infraestrutura**: Docker Compose
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python, Flask, SQLAlchemy, Marshmallow, JWT |
+| Frontend | React, Ant Design |
+| Database | MySQL 8.0 |
+| Infrastructure | Docker, Docker Compose |
 
-## Como rodar
+## ✨ Features
+
+### Student
+- Submit activities with mandatory proof of completion
+- Categories with configurable limits and weights
+- Resubmit rejected activities
+- Progress tracking (approved hours vs goal)
+- Real-time notifications (approval/rejection)
+- Search and filter by title and status
+
+### Director/Admin
+- Approve/reject with reason
+- Revert decisions
+- Category management (CRUD with limits and weights)
+- Dashboard with aggregated metrics
+- Notifications on new submissions
+- Search by name, student ID, title, and category
+- Filter by status and class
+
+### Technical
+- JWT authentication with bcrypt (automatic plaintext migration)
+- Soft delete with `deleted_at`
+- Server-side pagination
+- Marshmallow schema validation
+- Global error handlers (always JSON responses)
+- Structured logging
+- Health check endpoint
+- Role-based route protection (frontend)
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Docker and Docker Compose installed
+
+### Setup
 
 ```bash
-docker compose up --build -d
+# Clone
+git clone https://github.com/IsaacMartins12/Launcher.git
+cd Launcher
+
+# Configure environment variables
+cp .env.example .env
+
+# Start all services
+docker compose up -d
+
+# Access
+# Frontend: http://localhost:3001
+# Backend:  http://localhost:2500
+# Health:   http://localhost:2500/health
 ```
 
-| Serviço   | URL                     |
-|-----------|-------------------------|
-| Frontend  | http://localhost:3001    |
-| Backend   | http://localhost:2500    |
-| MySQL     | localhost:3306           |
+### Development Credentials
 
-## Usuários de teste
+| Role | Username | Password |
+|------|----------|----------|
+| Admin | 170820 | 123 |
+| Student | 170819 | 1234 |
+| Student | 170821 | 1234 |
 
-| Usuário | Senha | Perfil  |
-|---------|-------|---------|
-| 170819  | 1234  | Aluno   |
-| 170821  | 1234  | Aluno   |
-| 170820  | 123   | Admin   |
+### Useful Commands
 
-## Estrutura do projeto
+```bash
+# Reset database (clears all data)
+docker compose down -v
+docker compose up -d
 
-```
-├── autofront/                  # Frontend React
-│   ├── src/
-│   │   ├── components/         # Componentes (Login, Aluno, Instituição)
-│   │   └── components_css/
-│   ├── Dockerfile
-│   └── package.json
-├── launch-backend/             # Backend Flask
-│   ├── flaskr/
-│   │   ├── __init__.py         # Application factory (create_app)
-│   │   ├── app.py              # Entrypoint (Flask CLI)
-│   │   ├── config.py           # Configurações (Dev/Prod)
-│   │   ├── extensions.py       # SQLAlchemy, JWT, CORS
-│   │   ├── models/
-│   │   │   ├── user.py         # Model User
-│   │   │   └── registro.py     # Model Registro
-│   │   ├── routes/
-│   │   │   ├── auth.py         # Blueprint: login/logout
-│   │   │   ├── student.py      # Blueprint: área do aluno
-│   │   │   ├── admin.py        # Blueprint: área do diretor
-│   │   │   └── profile.py      # Blueprint: perfil do usuário
-│   │   └── schema.sql          # Seed de dados (docker-entrypoint)
-│   ├── Dockerfile
-│   └── requirements.txt
-└── docker-compose.yml          # Orquestração dos 3 serviços
+# View backend logs
+docker compose logs backend --tail 50
+
+# Rebuild after changes
+docker compose build
+docker compose up -d
 ```
 
-## Arquitetura do Backend
+## 📁 Project Structure
 
-O backend segue o **Application Factory Pattern** com **Blueprints** para separação de responsabilidades:
+```
+├── launch-backend/
+│   └── flaskr/
+│       ├── __init__.py          # Application factory
+│       ├── config.py            # Environment-based config
+│       ├── extensions.py        # SQLAlchemy, JWT, CORS
+│       ├── schemas.py           # Marshmallow validation
+│       ├── schema.sql           # DDL + seed data
+│       ├── models/
+│       │   ├── user.py          # User with bcrypt
+│       │   ├── registro.py      # Submission with soft delete
+│       │   ├── category.py      # Categories with weight/limit
+│       │   └── notification.py  # In-app notifications
+│       └── routes/
+│           ├── auth.py          # Login/logout
+│           ├── student.py       # Student submission CRUD
+│           ├── admin.py         # Approval + categories
+│           ├── dashboard.py     # Aggregated metrics
+│           ├── notification.py  # List/mark as read
+│           ├── profile.py       # User profile
+│           └── health.py        # Health check
+├── autofront/
+│   └── src/
+│       ├── App.js               # Router + route guards
+│       ├── components/
+│       │   ├── Login.js         # Login screen
+│       │   └── components_additionalH/
+│       │       ├── Alunos/      # Student panel
+│       │       └── Instituição/ # Admin panel
+├── docker-compose.yml
+├── .env.example
+└── docs/
+    ├── API.md                   # Full API documentation
+    ├── BUSINESS_RULES.md        # Business rules
+    ├── ARCHITECTURE.md          # Architectural decisions
+    ├── SETUP.md                 # Installation guide
+    └── CONTRIBUTING.md          # Contributing guide
+```
 
-- **Factory** (`__init__.py`): Cria e configura a app, inicializa extensões e registra blueprints
-- **Config** (`config.py`): Classes de configuração por ambiente (Development/Production)
-- **Extensions** (`extensions.py`): Instâncias das extensões Flask desacopladas da app
-- **Models**: SQLAlchemy models com métodos `to_dict()` para serialização
-- **Routes**: Blueprints isolados por domínio (auth, student, admin, profile)
+## 📊 API Endpoints
 
-## API
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | /login | Authentication |
+| GET | /health | Health check |
+| GET | /aluno | List submissions (filters + pagination) |
+| POST | /files | Create submission |
+| PUT | /aluno/:id | Edit submission |
+| DELETE | /aluno/:id | Soft delete |
+| POST | /aluno/:id/resubmit | Resubmit rejected |
+| GET | /inst | List all (admin, filters) |
+| PUT | /inst | Approve/reject/revert |
+| GET/POST/PUT/DELETE | /categories | Category CRUD |
+| GET | /notifications | List notifications |
+| PUT | /notifications/read-all | Mark all as read |
+| GET | /dashboard/admin | Admin metrics |
+| GET | /dashboard/student | Student progress |
+| GET/PUT | /perfil | User profile |
 
-| Método | Rota     | Descrição                        | Auth  | Blueprint |
-|--------|----------|----------------------------------|-------|-----------|
-| POST   | /login   | Autenticação (retorna JWT)       | Não   | auth      |
-| POST   | /logout  | Logout                           | Não   | auth      |
-| GET    | /aluno   | Listar registros do aluno logado | JWT   | student   |
-| POST   | /files   | Enviar atividades complementares | JWT   | student   |
-| GET    | /inst    | Listar todas as submissões       | JWT   | admin     |
-| PUT    | /inst    | Aprovar/Rejeitar submissão       | JWT   | admin     |
-| GET    | /perfil  | Dados do perfil do usuário       | JWT   | profile   |
-| PUT    | /perfil  | Atualizar nome/turma             | JWT   | profile   |
+Full documentation at [`docs/API.md`](docs/API.md)
 
-## Status do projeto
+## 📋 Business Rules
 
-- [x] Login/autenticação JWT
-- [x] Área do aluno (enviar certificados, ver status, editar/excluir)
-- [x] Área do diretor (aprovar/rejeitar com motivo)
-- [x] Perfil do usuário (avatar, edição de dados)
-- [x] Docker Compose (MySQL + Backend + Frontend)
-- [x] Layout responsivo (mobile + desktop)
-- [x] Backend com Blueprints e Application Factory Pattern
-- [x] Filtros por status (Pendentes/Aprovados/Rejeitados)
-- [x] Dashboard com cards de resumo
-- [ ] Upload real de arquivos (PDF/imagem)
-- [ ] Hash de senhas (atualmente plaintext)
-- [ ] Testes automatizados
+- Proof of completion is mandatory for every submission
+- Categories have hour limits (blocks submission when reached)
+- Weights applied per category (e.g., Mentoring 1.5x)
+- Students can resubmit rejected activities
+- Admin can revert decisions
+- Bidirectional notifications (student ↔ admin)
+
+Details at [`docs/BUSINESS_RULES.md`](docs/BUSINESS_RULES.md)
+
+## 🔒 Security
+
+- Passwords hashed with bcrypt (cost 12)
+- JWT with expiration (8h dev / 4h prod)
+- Role-based route protection on frontend
+- Input validation with Marshmallow
+- Configurable CORS
+- Credentials in `.env` (not versioned)
+
+## 📝 License
+
+MIT
