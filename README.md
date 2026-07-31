@@ -2,7 +2,18 @@
 
 Full-stack system for managing academic extracurricular activities. Students submit certificates, directors approve/reject them, and the system automatically controls limits, weights, and progress tracking.
 
-## 🛠 Tech Stack
+## � Screenshots
+
+### Login
+![Login](docs/assets/login.png)
+
+### Student Panel
+![Student Panel](docs/assets/student-panel.png)
+
+### Admin Panel
+![Admin Panel](docs/assets/admin-panel.png)
+
+## �🛠 Tech Stack
 
 | Layer | Technology |
 |-------|-----------|

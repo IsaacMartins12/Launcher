@@ -16,8 +16,9 @@ CREATE TABLE `users` (
 -- Senhas em plaintext para seed de desenvolvimento.
 -- No primeiro login, o sistema migra automaticamente para bcrypt hash.
 INSERT INTO users (name, turma, username, password, is_admin) VALUES
-  ('Fulano de Tal Silva', '3BE', '170819', '1234', 0),
-  ('Fulano de Tal Souza', '3AE', '170821', '1234', 0),
+  ('Maria Clara Santos', '3AE', '170819', '1234', 0),
+  ('João Pedro Oliveira', '3BE', '170821', '1234', 0),
+  ('Ana Beatriz Lima', '2AE', '170822', '1234', 0),
   ('Prof. Carlos Diretor', 'Coordenação', '170820', '123', 1);
 
 CREATE TABLE `categories` (
@@ -71,3 +72,25 @@ CREATE TABLE `notifications` (
   FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   INDEX `idx_user_read` (`user_id`, `is_read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Seed data for screenshots / demo
+INSERT INTO registros (user_id, category_id, title, type, hours, certificate, status, rejection_reason, created_at) VALUES
+  (1, 1, 'Curso de Python Avançado', 'Curso', 40, 'certificado-python.pdf', 'Aprovado', NULL, '2026-06-15 10:30:00'),
+  (1, 3, 'Workshop Docker & Kubernetes', 'Workshop', 16, 'cert-docker.pdf', 'Aprovado', NULL, '2026-06-20 14:00:00'),
+  (1, 2, 'Palestra IA Generativa', 'Palestra', 4, 'palestra-ia.pdf', 'Em Análise', NULL, '2026-07-28 09:15:00'),
+  (1, 5, 'Monitoria de Algoritmos', 'Monitoria', 60, 'declaracao-monitoria.pdf', 'Aprovado', NULL, '2026-05-10 08:00:00'),
+  (1, 4, 'Semana de Tecnologia FUCAPI', 'Evento', 20, 'evento-semtec.pdf', 'Rejeitado', 'Certificado sem carga horária especificada', '2026-07-01 11:00:00'),
+  (2, 1, 'Curso de Java Spring Boot', 'Curso', 30, 'cert-java.pdf', 'Em Análise', NULL, '2026-07-29 16:00:00'),
+  (2, 6, 'Projeto Horta Comunitária', 'Projeto de Extensão', 80, 'extensao-horta.pdf', 'Aprovado', NULL, '2026-04-20 10:00:00'),
+  (2, 7, 'Voluntariado Hospital', 'Voluntariado', 24, 'voluntariado.pdf', 'Em Análise', NULL, '2026-07-30 08:30:00'),
+  (3, 1, 'Curso React e TypeScript', 'Curso', 20, 'cert-react.pdf', 'Aprovado', NULL, '2026-07-10 13:00:00'),
+  (3, 2, 'Palestra Segurança Web', 'Palestra', 3, 'palestra-sec.pdf', 'Em Análise', NULL, '2026-07-31 09:00:00');
+
+INSERT INTO notifications (user_id, message, type, is_read, created_at) VALUES
+  (4, 'Maria Clara Santos enviou 1 atividade(s) para análise.', 'info', 0, '2026-07-28 09:15:00'),
+  (4, 'João Pedro Oliveira enviou 2 atividade(s) para análise.', 'info', 0, '2026-07-30 08:30:00'),
+  (4, 'Ana Beatriz Lima enviou 1 atividade(s) para análise.', 'info', 0, '2026-07-31 09:00:00'),
+  (1, 'Sua atividade ''Curso de Python Avançado'' foi aprovada!', 'success', 1, '2026-06-16 14:00:00'),
+  (1, 'Sua atividade ''Semana de Tecnologia FUCAPI'' foi rejeitada. Motivo: Certificado sem carga horária especificada', 'error', 0, '2026-07-05 10:00:00'),
+  (1, 'Sua atividade ''Workshop Docker & Kubernetes'' foi aprovada!', 'success', 1, '2026-06-22 11:00:00'),
+  (1, 'Sua atividade ''Monitoria de Algoritmos'' foi aprovada!', 'success', 1, '2026-05-12 09:00:00');
