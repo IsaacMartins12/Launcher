@@ -172,6 +172,31 @@ Full documentation at [`docs/API.md`](docs/API.md)
 
 Details at [`docs/BUSINESS_RULES.md`](docs/BUSINESS_RULES.md)
 
+## 🧪 Testing
+
+The backend includes a comprehensive test suite with 63 integration tests using pytest and SQLite in-memory (no MySQL dependency for tests).
+
+```bash
+# Run all tests
+docker compose run --rm --no-deps -e PYTHONPATH=/app backend pytest -v
+
+# Run with coverage report
+docker compose run --rm --no-deps -e PYTHONPATH=/app backend pytest --cov=flaskr --cov-report=term-missing
+
+# Run specific test file
+docker compose run --rm --no-deps -e PYTHONPATH=/app backend pytest tests/test_auth.py -v
+```
+
+### Test Coverage
+| Module | Tests |
+|--------|-------|
+| Auth (login/logout) | 8 |
+| Student (submissions CRUD) | 13 |
+| Admin (review + categories) | 17 |
+| Dashboard (metrics) | 8 |
+| Notifications | 8 |
+| Health check | 2 |
+
 ## 🔒 Security
 
 - Passwords hashed with bcrypt (cost 12)
