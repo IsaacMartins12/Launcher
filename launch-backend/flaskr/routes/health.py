@@ -10,9 +10,25 @@ health_bp = Blueprint("health", __name__)
 
 @health_bp.route("/health", methods=["GET"])
 def health_check():
-    """Return application health status.
-
-    Checks database connectivity and returns overall status.
+    """Check application and database health.
+    ---
+    tags:
+      - Health
+    security: []
+    responses:
+      200:
+        description: System is healthy
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: healthy
+            database:
+              type: string
+              example: connected
+      503:
+        description: System is unhealthy
     """
     status = {"status": "healthy", "database": "connected"}
 

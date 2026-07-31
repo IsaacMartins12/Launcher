@@ -5,9 +5,11 @@ import os
 import sys
 
 from flask import Flask, jsonify
+from flasgger import Swagger
 
 from flaskr.config import config_by_name
 from flaskr.extensions import cors, db, jwt
+from flaskr.swagger_config import SWAGGER_TEMPLATE, SWAGGER_CONFIG
 
 
 def create_app(config_name=None):
@@ -38,6 +40,9 @@ def create_app(config_name=None):
 
     # Register blueprints
     _register_blueprints(app)
+
+    # Initialize Swagger UI
+    Swagger(app, template=SWAGGER_TEMPLATE, config=SWAGGER_CONFIG)
 
     # Create tables if they don't exist (dev convenience)
     with app.app_context():

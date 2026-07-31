@@ -14,7 +14,41 @@ _login_schema = LoginSchema()
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    """Authenticate user and return JWT token."""
+    """Authenticate user and return JWT token.
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - username
+            - password
+          properties:
+            username:
+              type: string
+              example: "170819"
+            password:
+              type: string
+              example: "1234"
+    responses:
+      200:
+        description: Login successful
+        schema:
+          type: object
+          properties:
+            is_Logged:
+              type: boolean
+            is_Admin:
+              type: boolean
+            token:
+              type: string
+      401:
+        description: Invalid credentials
+    """
     if not request.is_json:
         return jsonify({"error": "Content-Type must be application/json"}), 400
 
@@ -48,5 +82,12 @@ def login():
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
-    """Logout endpoint (stateless — client discards token)."""
+    """Logout (stateless - client discards token).
+    ---
+    tags:
+      - Auth
+    responses:
+      200:
+        description: Logout successful
+    """
     return jsonify({"logout": True}), 200

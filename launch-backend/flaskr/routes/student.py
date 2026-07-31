@@ -18,13 +18,34 @@ _submission_schema = SubmissionSchema()
 @student_bp.route("/aluno", methods=["GET"])
 @jwt_required()
 def list_submissions():
-    """List all active submissions for the authenticated student.
-
-    Supports pagination and filtering via query params:
-    - ?page=1&per_page=20
-    - ?search=python (searches title)
-    - ?status=Aprovado
-    - ?category=Curso
+    """List student submissions with filters.
+    ---
+    tags:
+      - Student
+    parameters:
+      - name: page
+        in: query
+        type: integer
+        default: 1
+      - name: per_page
+        in: query
+        type: integer
+        default: 20
+      - name: search
+        in: query
+        type: string
+        description: Search by title
+      - name: status
+        in: query
+        type: string
+        enum: [Em Análise, Aprovado, Rejeitado]
+      - name: category
+        in: query
+        type: string
+        description: Filter by category name
+    responses:
+      200:
+        description: Paginated list of submissions
     """
     user = _get_current_user()
     if not user:
@@ -69,7 +90,42 @@ def list_submissions():
 @student_bp.route("/files", methods=["POST"])
 @jwt_required()
 def create_submissions():
-    """Create one or more complementary hour submissions."""
+    """Create one or more submissions.
+    ---
+    tags:
+      - Student
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - title
+            - type
+            - hours
+          properties:
+            title:
+              type: string
+              example: "Python Advanced Course"
+            type:
+              type: string
+              example: "Curso"
+            hours:
+              type: integer
+              example: 40
+            certificate:
+              type: string
+              example: "certificate.pdf"
+            category_id:
+              type: integer
+              example: 1
+    responses:
+      201:
+        description: Submission created
+      400:
+        description: Validation error or category limit reached
+    """
     user = _get_current_user()
     if not user:
         return jsonify({"error": "Usuário não encontrado"}), 404
