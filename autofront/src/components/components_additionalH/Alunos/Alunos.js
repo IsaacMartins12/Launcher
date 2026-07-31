@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Button, Space, Table, Tag, Modal, message, Radio, Card, Row, Col, Menu, Statistic, Avatar, Dropdown, Form, Input, Descriptions, Tooltip, Badge, Popover, List } from 'antd';
-import { PlusOutlined, SendOutlined, EditOutlined, DeleteOutlined, CloudUploadOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, HistoryOutlined, UserOutlined, LogoutOutlined, ReloadOutlined, BellOutlined } from '@ant-design/icons';
+import { PlusOutlined, SendOutlined, EditOutlined, DeleteOutlined, CloudUploadOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, HistoryOutlined, UserOutlined, LogoutOutlined, ReloadOutlined, BellOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ActivityForm from './ActivityForm';
 import CertificateList from './CertificateList';
@@ -24,20 +24,12 @@ const Aluno = () => {
   const [categories, setCategories] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      fetch('http://localhost:2500/aluno', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(result => {
-          const items = Array.isArray(result) ? result : (result.data || []);
-          const mapped = items.map(item => ({ ...item, submissionDate: item.created_at }));
-          setSubmittedActivities(mapped);
-        })
-        .catch(err => console.error('Erro ao buscar registros:', err));
+      fetchSubmissions(token);
 
       fetch('http://localhost:2500/perfil', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -56,6 +48,21 @@ const Aluno = () => {
       fetchNotifications(token);
     }
   }, []);
+
+  const fetchSubmissions = (token, filters = {}) => {
+    if (!token) token = localStorage.getItem('token');
+    const params = new URLSearchParams();
+    if (filters.search) params.set('search', filters.search);
+    if (filters.status && filters.status !== 'Todos') params.set('status', filters.status);
+    const url = `http://localhost:2500/aluno${params.toString() ? '?' + params.toString() : ''}`;
+    fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => res.json())
+      .then(result => {
+        const items = Array.isArray(result) ? result : (result.data || []);
+        setSubmittedActivities(items.map(item => ({ ...item, submissionDate: item.created_at })));
+      })
+      .catch(err => console.error('Erro ao buscar registros:', err));
+  };
 
   const fetchNotifications = (token) => {
     if (!token) token = localStorage.getItem('token');
@@ -170,6 +177,7 @@ const Aluno = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('is_admin');
     navigate('/');
   };
 
@@ -318,14 +326,25 @@ const Aluno = () => {
               <h3 style={{ margin: 0, color: '#333' }}>Histórico de Envios</h3>
               <p style={{ margin: 0, color: '#888', fontSize: '13px' }}>Acompanhe o status das suas solicitações</p>
             </div>
-            <Radio.Group value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} optionType="button" buttonStyle="solid" size="small">
-              <Radio.Button value="Todos">Todos ({submittedActivities.length})</Radio.Button>
-              <Radio.Button value="Em Análise">Pendentes ({pendingCount})</Radio.Button>
-              <Radio.Button value="Aprovado">Aprovados ({submittedActivities.filter(i => i.status === 'Aprovado').length})</Radio.Button>
-              <Radio.Button value="Rejeitado">Rejeitados ({rejectedCount})</Radio.Button>
+            <Radio.Group value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); fetchSubmissions(null, { search: searchText, status: e.target.value }); }} optionType="button" buttonStyle="solid" size="small">
+              <Radio.Button value="Todos">Todos</Radio.Button>
+              <Radio.Button value="Em Análise">Pendentes</Radio.Button>
+              <Radio.Button value="Aprovado">Aprovados</Radio.Button>
+              <Radio.Button value="Rejeitado">Rejeitados</Radio.Button>
             </Radio.Group>
           </div>
-          <Table dataSource={statusFilter === 'Todos' ? submittedActivities : submittedActivities.filter(i => i.status === statusFilter)} columns={submittedColumns} pagination={{ pageSize: 8 }} scroll={{ x: 700 }} rowKey={(record) => record.id || Math.random()} />
+          <div style={{ marginBottom: '16px' }}>
+            <Input
+              prefix={<SearchOutlined style={{ color: '#bbb' }} />}
+              placeholder="Buscar por título..."
+              value={searchText}
+              onChange={(e) => { setSearchText(e.target.value); fetchSubmissions(null, { search: e.target.value, status: statusFilter }); }}
+              allowClear
+              onClear={() => { setSearchText(''); fetchSubmissions(null, { status: statusFilter }); }}
+              style={{ maxWidth: 350 }}
+            />
+          </div>
+          <Table dataSource={submittedActivities} columns={submittedColumns} pagination={{ pageSize: 8 }} scroll={{ x: 700 }} rowKey={(record) => record.id || Math.random()} />
         </div>
       );
     }

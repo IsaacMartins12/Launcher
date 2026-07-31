@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Spin, Layout, Space, Tag, Input, InputNumber, Modal, Button, message, Radio, Card, Row, Col, Menu, Statistic, Tooltip, Form, Badge, Popover, List } from 'antd';
-import { CheckOutlined, CloseOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, TeamOutlined, DashboardOutlined, UnorderedListOutlined, UndoOutlined, AppstoreOutlined, PlusOutlined, EditOutlined, DeleteOutlined, BellOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, TeamOutlined, DashboardOutlined, UnorderedListOutlined, UndoOutlined, AppstoreOutlined, PlusOutlined, EditOutlined, DeleteOutlined, BellOutlined, SearchOutlined, LogoutOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 
 const { Content, Sider, Header } = Layout;
 
 const Inst = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
@@ -20,6 +22,7 @@ const Inst = () => {
   const [categoryForm] = Form.useForm();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -50,10 +53,14 @@ const Inst = () => {
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
   };
 
-  const fetchData = async () => {
+  const fetchData = async (filters = {}) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:2500/inst', {
+      const params = new URLSearchParams();
+      if (filters.search) params.set('search', filters.search);
+      if (filters.status && filters.status !== 'Todos') params.set('status', filters.status);
+      const url = `http://localhost:2500/inst${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -369,20 +376,31 @@ const Inst = () => {
         </div>
         <Radio.Group
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => { setStatusFilter(e.target.value); fetchData({ search: searchText, status: e.target.value }); }}
           optionType="button"
           buttonStyle="solid"
           size="small"
         >
-          <Radio.Button value="Todos">Todos ({data.length})</Radio.Button>
-          <Radio.Button value="Em Análise">Pendentes ({pendingCount})</Radio.Button>
-          <Radio.Button value="Aprovado">Aprovados ({approvedCount})</Radio.Button>
-          <Radio.Button value="Rejeitado">Rejeitados ({rejectedCount})</Radio.Button>
+          <Radio.Button value="Todos">Todos</Radio.Button>
+          <Radio.Button value="Em Análise">Pendentes</Radio.Button>
+          <Radio.Button value="Aprovado">Aprovados</Radio.Button>
+          <Radio.Button value="Rejeitado">Rejeitados</Radio.Button>
         </Radio.Group>
+      </div>
+      <div style={{ marginBottom: '16px' }}>
+        <Input
+          prefix={<SearchOutlined style={{ color: '#bbb' }} />}
+          placeholder="Buscar por nome, matrícula, título ou categoria..."
+          value={searchText}
+          onChange={(e) => { setSearchText(e.target.value); fetchData({ search: e.target.value, status: statusFilter }); }}
+          allowClear
+          onClear={() => { setSearchText(''); fetchData({ status: statusFilter }); }}
+          style={{ maxWidth: 400 }}
+        />
       </div>
       <Spin spinning={loading}>
         <Table
-          dataSource={filteredData}
+          dataSource={data}
           columns={columns}
           pagination={{ pageSize: 10 }}
           scroll={{ x: 800 }}
@@ -456,7 +474,8 @@ const Inst = () => {
       <Layout>
         <Header style={{ backgroundColor: '#fff', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
           <span style={{ fontWeight: 500, fontSize: '16px', color: '#333' }}>Painel Administrativo</span>
-          <Popover
+          <Space size="middle">
+            <Popover
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Notificações</span>
@@ -494,6 +513,15 @@ const Inst = () => {
               <BellOutlined style={{ fontSize: '20px', cursor: 'pointer', color: '#555' }} />
             </Badge>
           </Popover>
+          <Button
+            type="text"
+            icon={<LogoutOutlined />}
+            onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('is_admin'); navigate('/'); }}
+            style={{ color: '#ff4d4f' }}
+          >
+            Sair
+          </Button>
+          </Space>
         </Header>
         <Content style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 64px)' }}>
           {/* Cards resumo no topo */}

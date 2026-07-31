@@ -1,111 +1,205 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, Checkbox, Row, Col } from 'antd';
-import { UserOutlined, LockOutlined, ArrowRightOutlined } from '@ant-design/icons';
-import { Link, useNavigate } from 'react-router-dom';
-import logoImage from "../img/Logo_Otimize__4_-removebg-preview.png";
-import {message} from 'antd';
-
-const isLoginSuccessful = false;
+import React from 'react';
+import { Form, Input, Button, message } from 'antd';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
-  const navigate = useNavigate(); // Utiliza o hook useNavigate para redirecionamento
-  const [isAluno, setIsAluno] = useState(false); // Estado para verificar se é um aluno
+  const navigate = useNavigate();
+  const [loading, setLoading] = React.useState(false);
 
-  const onFinish = (values) => {
-    // Lógica de autenticação ou validação do login aqui
-    const login = {
-      "username" : values.username,
-      "password" : values.password,
-    }
-
-    const jsonData = JSON.stringify(login);
-
-    // Simulando um login bem sucedido
-    const options = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-        // Outros cabeçalhos, se necessário
-      },
-      body: jsonData
-    };
-    
-    // Fazer a requisição usando fetch
-    fetch("http://localhost:2500/login", options)
-      .then(response => response.json())
-      .then(data => {
-        
-        if (data.is_Logged == 1){
-        const isLoginSuccessful = true;
-        localStorage.setItem('token', data.token);
-        message.success('Login feito com sucesso');
-
-        if (!data.is_Admin) {
-          // Verifica se o login foi feito pelo aluno (condição de exemplo)
-          //if (values.username === 'aluno' && values.password === '123') {
-            setIsAluno(true);
-            // Redirecionamento para a página desejada após o login bem sucedido
-            navigate('/aluno'); // Redireciona para '/aluno'
-          } else {
-            //navigate('/main'); // Redireciona para '/main' se não for aluno
-            message.success('Você é um usuario admin');
-            navigate('/inst'); // Redireciona para '/' se não for aluno
-    
-        }
-      }
-      else{
-        console.log(data)
-        message.error('Login não foi efetuado');
-      }
-
-      })
-      .catch(error => {
-        // Lógica a ser executada em caso de erro na requisição
-        message.error('Erro no servidor');
-        navigate('/inst');
+  const onFinish = async (values) => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:2500/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: values.username, password: values.password }),
       });
+      const data = await response.json();
 
+      if (data.is_Logged) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('is_admin', data.is_Admin ? 'true' : 'false');
+        message.success('Login realizado com sucesso!');
+        navigate(data.is_Admin ? '/inst' : '/aluno');
+      } else {
+        message.error('Credenciais inválidas');
+      }
+    } catch (error) {
+      message.error('Erro de conexão com o servidor');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="login-page">
-      <Row justify="center" align="middle" style={{ minHeight: '100vh' }}>
-        <Col xs={22} sm={16} md={12} lg={8} xl={7}>
-          <div className="login-container" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}>
-
-            {/* Div adicionada para o título do login */}
-            <div className="login-title">
-              <strong style={{ paddingTop: '20px', paddingBottom: '20px', display: 'block' }}>Login</strong>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        {/* Left side - branding */}
+        <div style={styles.brandingSide}>
+          <div style={styles.brandingContent}>
+            <div style={styles.logoIcon}>📚</div>
+            <h1 style={styles.brandTitle}>Horas Complementares</h1>
+            <p style={styles.brandSubtitle}>
+              Gerencie suas atividades extracurriculares de forma simples e organizada.
+            </p>
+            <div style={styles.features}>
+              <div style={styles.feature}>✓ Envie certificados</div>
+              <div style={styles.feature}>✓ Acompanhe aprovações</div>
+              <div style={styles.feature}>✓ Controle seu progresso</div>
             </div>
-            <Form name="basic" initialValues={{ remember: true }} onFinish={onFinish}>
-              <Form.Item name="username" rules={[{ required: true, message: 'Please input your username!' }]}>
-                <Input prefix={<UserOutlined />} placeholder="Usuário" size="large" />
+          </div>
+        </div>
+
+        {/* Right side - form */}
+        <div style={styles.formSide}>
+          <div style={styles.formContainer}>
+            <h2 style={styles.formTitle}>Entrar</h2>
+            <p style={styles.formSubtitle}>Acesse sua conta para continuar</p>
+
+            <Form name="login" onFinish={onFinish} layout="vertical" size="large">
+              <Form.Item
+                name="username"
+                rules={[{ required: true, message: 'Informe sua matrícula' }]}
+              >
+                <Input
+                  prefix={<UserOutlined style={{ color: '#bbb' }} />}
+                  placeholder="Matrícula ou usuário"
+                  style={styles.input}
+                />
               </Form.Item>
-              <Form.Item name="password" rules={[{ required: true, message: 'Please input your password!' }]}>
-                <Input.Password prefix={<LockOutlined />} placeholder="Senha" size="large" />
+
+              <Form.Item
+                name="password"
+                rules={[{ required: true, message: 'Informe sua senha' }]}
+              >
+                <Input.Password
+                  prefix={<LockOutlined style={{ color: '#bbb' }} />}
+                  placeholder="Senha"
+                  style={styles.input}
+                />
               </Form.Item>
-              <Form.Item name="remember" valuePropName="checked" style={{ marginBottom: 10 }}>
-                <Checkbox style={{ fontSize: '14px', color: 'white', marginLeft: '-2px' }}>
-                  Mantenha-me conectado
-                </Checkbox>
-                <a href="/forgot-password" style={{ fontSize: '14px', marginLeft: '22px' }}>Esqueceu a senha ?</a>
-              </Form.Item>
-              <Form.Item>
-                <Button className='btn_login' type="primary" htmlType="submit" style={{ width: '50%', fontSize: '14px', height: '50px', borderRadius: '40px' }}>
+
+              <Form.Item style={{ marginBottom: 16 }}>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  block
+                  style={styles.submitButton}
+                >
                   Entrar
                 </Button>
               </Form.Item>
-              <Form.Item>
-                <Link to="/cadastro" style={{ color: '#FFFFFF', display: 'flex', alignItems: 'center' }}>
-                  Cadastre-se <ArrowRightOutlined style={{ marginLeft: '5px' }} />
-                </Link>
-              </Form.Item>
             </Form>
+
+            <div style={styles.footer}>
+              <span style={{ color: '#888', fontSize: '13px' }}>
+                Sistema de Horas Complementares
+              </span>
+            </div>
           </div>
-        </Col>
-      </Row>
+        </div>
+      </div>
     </div>
   );
+};
+
+const styles = {
+  page: {
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f2f5',
+    padding: '20px',
+  },
+  container: {
+    display: 'flex',
+    width: '100%',
+    maxWidth: '900px',
+    minHeight: '500px',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)',
+  },
+  brandingSide: {
+    flex: 1,
+    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '48px',
+  },
+  brandingContent: {
+    color: '#fff',
+    textAlign: 'center',
+  },
+  logoIcon: {
+    fontSize: '48px',
+    marginBottom: '16px',
+  },
+  brandTitle: {
+    fontSize: '24px',
+    fontWeight: 700,
+    marginBottom: '12px',
+    color: '#fff',
+  },
+  brandSubtitle: {
+    fontSize: '14px',
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: '1.6',
+    marginBottom: '32px',
+  },
+  features: {
+    textAlign: 'left',
+    display: 'inline-block',
+  },
+  feature: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: '13px',
+    marginBottom: '8px',
+    paddingLeft: '4px',
+  },
+  formSide: {
+    flex: 1,
+    backgroundColor: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '48px',
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: '320px',
+  },
+  formTitle: {
+    fontSize: '28px',
+    fontWeight: 700,
+    color: '#1a1a2e',
+    marginBottom: '4px',
+  },
+  formSubtitle: {
+    fontSize: '14px',
+    color: '#888',
+    marginBottom: '32px',
+  },
+  input: {
+    borderRadius: '8px',
+    height: '48px',
+  },
+  submitButton: {
+    height: '48px',
+    borderRadius: '8px',
+    fontSize: '16px',
+    fontWeight: 600,
+    backgroundColor: '#1a1a2e',
+    borderColor: '#1a1a2e',
+  },
+  footer: {
+    textAlign: 'center',
+    marginTop: '24px',
+  },
 };
 
 export default Login;

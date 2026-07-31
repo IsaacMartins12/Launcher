@@ -20,7 +20,11 @@ _submission_schema = SubmissionSchema()
 def list_submissions():
     """List all active submissions for the authenticated student.
 
-    Supports pagination via query params: ?page=1&per_page=20
+    Supports pagination and filtering via query params:
+    - ?page=1&per_page=20
+    - ?search=python (searches title)
+    - ?status=Aprovado
+    - ?category=Curso
     """
     user = _get_current_user()
     if not user:
@@ -33,6 +37,22 @@ def list_submissions():
     )
 
     query = Registro.active().filter_by(user_id=user.id).order_by(Registro.created_at.desc())
+
+    # Filter by status
+    status = request.args.get("status")
+    if status and status in ("Em Análise", "Aprovado", "Rejeitado"):
+        query = query.filter(Registro.status == status)
+
+    # Filter by category
+    category_filter = request.args.get("category")
+    if category_filter:
+        query = query.join(Category).filter(Category.name == category_filter)
+
+    # Search by title
+    search = request.args.get("search")
+    if search:
+        query = query.filter(Registro.title.ilike(f"%{search}%"))
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
     return jsonify({
